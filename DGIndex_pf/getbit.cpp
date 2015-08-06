@@ -54,7 +54,7 @@ int _donread(int fd, void *buffer, unsigned int count)
   {
     if (!_eof(fd))
     {
-      //StdinTmpFile
+      //StdinStreamFile
       bytes = _read(fd, buffer, count);
       if (bytes != count)
       {
@@ -127,44 +127,9 @@ void Refresh_LogTimeCode()
   sprintf(LogTimeCode, "%s", szTime);
 }
 
-//
-//標準入力からデータ取得
-//  ver. file pointer       read stdin
-/*
-size_t fread(void *buf, size_t size, size_t n, FILE *fp);
-int read_stdin_fp(void *buffer, const int demandTotalSize)
-ファイル位置指示子を読み込んだデータバイト分進めます。
-エラーが発生した場合にはファイル位置指示子の値は不定です。
-
-size_t size = 2048　が失敗するとデータが消失しているようなので
-size_t size = 1にした。ＣＰＵ使用率が１０程度になる。
-*/
-//{
-//  char tmpbuff[1];
-//  int read_sum = 0;
-//
-//  while (read_sum < demandTotalSize)
-//  {
-//
-//    int readchunk = fread(tmpbuff, 1, 1, fpStdin);
-//    if (readchunk == 0)
-//    {
-//      IsClosed_stdin = true;
-//      break;
-//    }
-//
-//    memcpy((char*)buffer + read_sum, tmpbuff, readchunk);
-//    read_sum += readchunk;
-//
-//  }
-//
-//  HasExtraData_fromStdin = true;
-//  return read_sum;
-//}
 
 //
 //標準入力からデータ取得
-//  ver. file descriptor    read stdin
 int read_stdin_fd(void *buffer, const int demandTotalSize)
 {
   int read_sum = 0;
