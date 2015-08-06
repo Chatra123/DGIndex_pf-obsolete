@@ -31,7 +31,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
     /*pf_append*/
     Mode_Stdin = false;
-    StdinStreamFileSize_byArg = 10;
+    StdinStreamFileSize_byArg = 0;
     ReadSpeedLimit_byArg = 0;
     Mode_NoDialoge = false;
     Mode_UseBad = false;
@@ -1438,9 +1438,6 @@ int Initialize_stdin()
   _setmode(_fileno(stdin), _O_BINARY);
   fdStdin = _fileno(stdin);
 
-  //  ver. file pointer       read stdin
-  //fpStdin = stdin;
-  //_setmode(_fileno(stdin), _O_BINARY);
 
   //StdinStreamFile
   //size
@@ -1455,7 +1452,7 @@ int Initialize_stdin()
   //
   //Fill strmFileBuff
   //
-  //  ver. file descriptor    read stdin
+  //  file descriptor    read stdin
   IsClosed_stdin = true;
   time_t timeReadPipe_begin = time(NULL);
   int curBuffSize = 0;
@@ -1467,9 +1464,9 @@ int Initialize_stdin()
 
     if (readsize == -1)                                    //fail to connect
     {
-      //標準入力がリダイレクトされるまで待機、１２０秒超過で終了
+      //標準入力がリダイレクトされるまで待機、３００秒で終了
       //一度接続を確認したらタイムアウトはしない
-      if (IsClosed_stdin && time(NULL) - timeReadPipe_begin < 120)
+      if (IsClosed_stdin && time(NULL) - timeReadPipe_begin < 300)
       {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         continue;
@@ -1487,32 +1484,19 @@ int Initialize_stdin()
   if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
   StdinStreamFile_Size = curBuffSize;
 
-  //  ver. file pointer       read stdin
-  //IsClosed_stdin = true;
-  //int readsize = fread(stdinBuff, StdinStreamFile_Size, 1, fpStdin);
-  //if (readsize == 0)  return 1;        //end of stream. too small source.
-  //IsClosed_stdin = false;
 
   //
   //Write StdinStreamFile
   //
   // fdで開くと終了時に削除できなかった。FILE*で開く。
-
-  //  ver. file descriptor    StdinStreamFile
-  //int writefd;
-  //if ((StdinStreamFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;
-  //if ((writefd = _open(StdinStreamFile_Path, _O_BINARY | _O_CREAT | _O_WRONLY)) == -1) return 1;
-  //if (_write(writefd, stdinBuff, Size_stdinBuff) != Size_stdinBuff) return 1;
-  //_close(writefd);
-
-  //  ver. file pointer       StdinStreamFile
+  //  file pointer    StdinStreamFile
   FILE * writefp;
   if ((StdinStreamFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;    //create file name
   if ((writefp = fopen(StdinStreamFile_Path, "wb")) == NULL) return 1;            //open
-  if (fwrite(strmFileBuff, StdinStreamFile_Size, 1, writefp) == 0) return 1;       //write
-  fclose(writefp);                                                             //close
+  if (fwrite(strmFileBuff, StdinStreamFile_Size, 1, writefp) == 0) return 1;      //write
+  fclose(writefp);                                                                //close
 
-  // Reopen StdinStreamFile to read
+  // reopen StdinStreamFile
   if ((fdStdinStreamFile = _open(StdinStreamFile_Path, _O_RDONLY | _O_BINARY)) == -1) return 1; //open
   strcpy(Infilename[NumLoadedFiles], StdinStreamFile_Path);                       //d2vファイル３行目のファイル名
   Infile[NumLoadedFiles] = fdStdinStreamFile;                                     //入力ファイルをStdinStreamFileに
