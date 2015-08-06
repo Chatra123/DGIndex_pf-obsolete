@@ -1,10 +1,10 @@
-
-skl_nasm.h�ɂ������āh�h�L�������g�̃t�H�[�}�b�g�h�����s������Ƀ��r���h�����
-
-
-error MSB6006: "cmd.exe" �̓R�[�h 1 �𔺂��ďI�����܂����B	
+﻿
+skl_nasm.hにたいして”ドキュメントのフォーマット”を実行した後にリビルドすると
 
 
-�ƃG���[���łĎ��s����B
-skl_nasm.h�́h�h�L�������g�̃t�H�[�}�b�g�h�����s���Ȃ��悤�ɂ���B
+error MSB6006: "cmd.exe" はコード 1 を伴って終了しました。	
+
+
+とエラーがでて失敗する。
+skl_nasm.hは”ドキュメントのフォーマット”を実行しないようにする。
 
