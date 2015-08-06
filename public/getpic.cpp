@@ -189,8 +189,8 @@ void WriteD2VLine(int finish)
   fprintf(D2VFile, "%s", D2VLine);
 
   /*pf_append*/
-  //２秒以上経過していたらファイルにフラッシュ
-  if (2 < time(NULL) - timeFlushD2VFile)
+  //４秒以上経過していたらファイルにフラッシュ
+  if (4 < time(NULL) - timeFlushD2VFile)
   {
     fflush(D2VFile);
     timeFlushD2VFile = time(NULL);
