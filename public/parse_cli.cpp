@@ -31,7 +31,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
     /*pf_append*/
     Mode_Stdin = false;
-    StdinStreamFileSize_byArg = 5;
+    StdinStreamFileSize_byArg = 10;
     ReadSpeedLimit_byArg = 0;
     Mode_NoDialoge = false;
     Mode_UseBad = false;
@@ -159,7 +159,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
         {
           Mode_NoDialoge = true;
         }
-        else if (!strncmp(opt, "tmpbuff", 7))
+        else if (!strncmp(opt, "streambuff", 7))
         {
           //StdinStreamFileSize_byArg
           char *param, paramText[32];
@@ -1442,18 +1442,18 @@ int Initialize_stdin()
   //fpStdin = stdin;
   //_setmode(_fileno(stdin), _O_BINARY);
 
-  //StdinTmpFile
+  //StdinStreamFile
   //size
   double buffsize_MB = StdinStreamFileSize_byArg;
-  buffsize_MB = (10 < buffsize_MB) ? buffsize_MB : 10;     //greater than 10 MiB
+  buffsize_MB = (10 < buffsize_MB) ? buffsize_MB : 10;        //greater than 10 MiB
   StdinStreamFile_Size = (int)(buffsize_MB * 1024 * 1024);
 
   //buff
-  char *tmpFileBuff = new char[StdinStreamFile_Size];         //一時ファイル作成用のバッファ
-  memset(tmpFileBuff, '\0', StdinStreamFile_Size);
+  char *strmFileBuff = new char[StdinStreamFile_Size];         //一時ファイル作成用のバッファ
+  memset(strmFileBuff, '\0', StdinStreamFile_Size);
 
   //
-  //Fill tmpFileBuff
+  //Fill strmFileBuff
   //
   //  ver. file descriptor    read stdin
   IsClosed_stdin = true;
@@ -1463,7 +1463,7 @@ int Initialize_stdin()
   while (curBuffSize < StdinStreamFile_Size)
   {
     int tickDemandSize = StdinStreamFile_Size - curBuffSize;  //要求サイズ
-    int readsize = _read(fdStdin, tmpFileBuff + curBuffSize, tickDemandSize);
+    int readsize = _read(fdStdin, strmFileBuff + curBuffSize, tickDemandSize);
 
     if (readsize == -1)                                    //fail to connect
     {
@@ -1494,35 +1494,35 @@ int Initialize_stdin()
   //IsClosed_stdin = false;
 
   //
-  //Write StdinTmpFile
+  //Write StdinStreamFile
   //
   // fdで開くと終了時に削除できなかった。FILE*で開く。
 
-  //  ver. file descriptor    StdinTmpFile
+  //  ver. file descriptor    StdinStreamFile
   //int writefd;
   //if ((StdinStreamFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;
   //if ((writefd = _open(StdinStreamFile_Path, _O_BINARY | _O_CREAT | _O_WRONLY)) == -1) return 1;
   //if (_write(writefd, stdinBuff, Size_stdinBuff) != Size_stdinBuff) return 1;
   //_close(writefd);
 
-  //  ver. file pointer       StdinTmpFile
+  //  ver. file pointer       StdinStreamFile
   FILE * writefp;
   if ((StdinStreamFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;    //create file name
   if ((writefp = fopen(StdinStreamFile_Path, "wb")) == NULL) return 1;            //open
-  if (fwrite(tmpFileBuff, StdinStreamFile_Size, 1, writefp) == 0) return 1;       //write
+  if (fwrite(strmFileBuff, StdinStreamFile_Size, 1, writefp) == 0) return 1;       //write
   fclose(writefp);                                                             //close
 
-  // Reopen StdinTmpFile to read
+  // Reopen StdinStreamFile to read
   if ((fdStdinStreamFile = _open(StdinStreamFile_Path, _O_RDONLY | _O_BINARY)) == -1) return 1; //open
   strcpy(Infilename[NumLoadedFiles], StdinStreamFile_Path);                       //d2vファイル３行目のファイル名
-  Infile[NumLoadedFiles] = fdStdinStreamFile;                                     //入力ファイルをStdinTmpFileに
+  Infile[NumLoadedFiles] = fdStdinStreamFile;                                     //入力ファイルをStdinStreamFileに
   NumLoadedFiles = 1;
 
-  // release tmpFileBuff
-  if (tmpFileBuff != NULL)
+  // release strmFileBuff
+  if (strmFileBuff != NULL)
   {
-    delete[] tmpFileBuff;
-    tmpFileBuff = NULL;
+    delete[] strmFileBuff;
+    strmFileBuff = NULL;
   }
 
   return 0;

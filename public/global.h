@@ -316,7 +316,7 @@ XTN __int64 fpos_tracker;                        //•W€“ü—ÍƒXƒgƒŠ[ƒ€•ˆêƒtƒ@ƒ
 XTN char Stdin_SourcePath[DG_MAX_PATH];          //d2vƒtƒ@ƒCƒ‹‚Rs–Ú‚É‘‚«‚Şƒtƒ@ƒCƒ‹–¼
 XTN bool IsClosed_stdin;
 
-//StdinTmpFile‚©‚ç“Ç‚Ş’iŠK‚È‚Ì‚É•W€“ü—Í‚©‚ç“Ç‚ñ‚¾‚©B
+//StdinStreamFile‚©‚ç“Ç‚Ş’iŠK‚È‚Ì‚É•W€“ü—Í‚©‚ç“Ç‚ñ‚¾‚©B
 //true‚È‚çƒvƒƒZƒXI—¹AStdinStreamFile_Size‚ğ‘‚â‚µ‚Ä‘Î‰‚·‚éB
 //morebuffLog‚Å’Ê’m‚·‚éB
 XTN bool HasExtraData_fromStdin;
