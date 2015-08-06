@@ -153,16 +153,6 @@ int Get_Hdr(int mode)
     code = Show_Bits(32);
     switch (code)
     {
-      /*
-      pf_append
-      ドロップの多いファイルでフリーズしたので少し変更。
-      0x1beを永遠と読込み続けて無限ループになったのでGet_Bits(32);で先に進める。
-      */
-      //case 0x1be:
-      //  Get_Bits(32);
-      //  break;
-
-      /*pf_off*/
     case 0x1be:
       break;
 
@@ -480,7 +470,7 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
     if (Info_Flag)
       UpdateInfo();
     UpdateWindowText(PICTURE_HEADER);
-  }
+    }
 
   vbv_delay = Get_Bits(16);
 
@@ -525,7 +515,7 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
       d2v_current.position = start;
     }
   }
-}
+  }
 
 /* decode slice header */
 /* ISO/IEC 13818-2 section 6.2.4 */
@@ -897,7 +887,7 @@ static void picture_coding_extension()
     burst_amplitude = Get_Bits(7);
     sub_carrier_phase = Get_Bits(8);
   }
-}
+    }
 
 /* decode extra bit information */
 /* ISO/IEC 13818-2 section 6.2.3.4. */
