@@ -317,7 +317,7 @@ XTN char Stdin_SourcePath[DG_MAX_PATH];          //d2vファイル３行目に書き込むフ
 XTN bool IsClosed_stdin;
 
 //StdinTmpFileから読込む段階なのに標準入力から読込んだか。
-//trueならプロセス終了、StdinTmpFile_Sizeを増やして対応する。
+//trueならプロセス終了、StdinStreamFile_Sizeを増やして対応する。
 //morebuffLogで通知する。
 XTN bool HasExtraData_fromStdin;
 XTN bool Flg_Exist_morebuffLog;
@@ -328,12 +328,12 @@ XTN int Initialize_stdin(void);
 XTN int read_stdin_fd(void *buff, int);
 XTN void Validate_fpos(void);
 
-//StdinTmpFile
+//StdinStreamFile
 //　ストリーム先頭部分をファイルとして取り出す
-XTN int fdStdinTmpFile;
-XTN char* StdinTmpFile_Path;                     //一時ファイルのパス
-XTN int StdinTmpFile_Size;                       //              サイズ
-XTN double StdinTmpFileSize_byArg;               //引数指定によるサイズ
+XTN int fdStdinStreamFile;
+XTN char* StdinStreamFile_Path;                     //一時ファイルのパス
+XTN int StdinStreamFile_Size;                       //              サイズ
+XTN double StdinStreamFileSize_byArg;               //引数指定によるサイズ
 
 //d2vファイル
 XTN time_t timeFlushD2VFile;                     //d2vファイルを更新した時間

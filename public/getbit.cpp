@@ -241,8 +241,8 @@ void Validate_fpos()
   if (HasExtraData_fromStdin)
   {
     //エラー
-    //StdinTmpFile_Sizeを大きくしてください。
-    //  fpos_tracker < StdinTmpFile_Size   にする
+    //StdinStreamFile_Sizeを大きくしてください。
+    //  fpos_tracker < StdinStreamFile_Size   にする
     if (Flg_Exist_morebuffLog == false)
     {
       if (Mode_Stdin && IsClosed_stdin)
@@ -290,9 +290,9 @@ void Validate_fpos()
         logger << LogTimeCode << std::endl;
         logger << Stdin_SourcePath << std::endl;
         logger << "   getbit.cpp    Line 293 " << std::endl;
-        logger << "   fpos_tracker < StdinTmpFile_Size   にする  " << std::endl;
+        logger << "   fpos_tracker < StdinStreamFile_Size   にする  " << std::endl;
         logger << "   fpos_tracker      =  " << fpos_tracker << std::endl;
-        logger << "   StdinTmpFile_Size =  " << StdinTmpFile_Size << std::endl;
+        logger << "   StdinStreamFile_Size =  " << StdinStreamFile_Size << std::endl;
       }
       logger.close();
       Flg_Exist_morebuffLog = true;
