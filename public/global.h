@@ -311,11 +311,11 @@ XTN bool Mode_NoDialoge;                         //suspend some dialoge
 
 //Stdin
 XTN int fdStdin;
-//XTN FILE* fpStdin;
 XTN __int64 fpos_tracker;                        //標準入力ストリーム＆一時ファイルを意識しないソースファイル上のポジション
 XTN char Stdin_SourcePath[DG_MAX_PATH];          //d2vファイル３行目に書き込むファイル名
 XTN bool IsClosed_stdin;
 
+//デバッグ用
 //StdinStreamFileから読込む段階なのに標準入力から読込んだか。
 //trueならプロセス終了、StdinStreamFile_Sizeを増やして対応する。
 //morebuffLogで通知する。
@@ -324,7 +324,6 @@ XTN bool Flg_Exist_morebuffLog;
 
 //func
 XTN int Initialize_stdin(void);
-//XTN int read_stdin_fp(void *buff, int);
 XTN int read_stdin_fd(void *buff, int);
 XTN void Validate_fpos(void);
 
@@ -336,12 +335,12 @@ XTN int StdinStreamFile_Size;                       //              サイズ
 XTN double StdinStreamFileSize_byArg;               //引数指定によるサイズ
 
 //d2vファイル
-XTN time_t timeFlushD2VFile;                     //d2vファイルを更新した時間
+XTN time_t timeFlushD2VFile;                        //d2vファイルを更新した時間
 
 //読込速度
-XTN double tickFileReadSize;                     //単位時間に読み込んだファイル量
-XTN double ReadSpeedLimit_byArg;                 //速度上限  byte/sec
-XTN time_point<system_clock, system_clock::duration> tickFileRead_begin;  //tickの開始時間
+XTN double tickReadSize_speedlimit;                 //速度制限    200ms間の読込み量
+XTN double ReadSpeedLimit_byArg;                    //速度制限    最大読込み速度
+XTN time_point<system_clock, system_clock::duration> tickBeginTime_speedlimit; //速度制限    tickの計測開始時間
 XTN void Check_ReadSpeedLimit(unsigned int readsize);
 
 //ログ           デバッグ用
