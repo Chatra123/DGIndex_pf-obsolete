@@ -168,19 +168,19 @@ void Check_ReadSpeedLimit(unsigned int readsize)
 {
   if (0 < ReadSpeedLimit_byArg)
   {
-    tickFileReadSize += readsize;                                        //単位時間の読込み量
-    auto tickDuration = system_clock::now() - tickFileRead_begin;        //計測時間
+    tickReadSize_speedlimit += readsize;                                       //単位時間の読込み量
+    auto tickDuration = system_clock::now() - tickBeginTime_speedlimit;        //計測時間
     auto duration_ms = duration_cast<std::chrono::milliseconds>(tickDuration).count();
 
     if (200 < duration_ms)
     {
       //単位時間ごとにカウンタリセット
-      tickFileRead_begin = system_clock::now();
-      tickFileReadSize = 0;
+      tickBeginTime_speedlimit = system_clock::now();
+      tickReadSize_speedlimit = 0;
     }
 
     //制限をこえたらsleep_for
-    if (ReadSpeedLimit_byArg * (200.0 / 1000.0) < tickFileReadSize)        //byte/sec
+    if (ReadSpeedLimit_byArg * (200.0 / 1000.0) < tickReadSize_speedlimit)        //byte/sec
       std::this_thread::sleep_for(std::chrono::milliseconds(200 - duration_ms));
   }
 }
@@ -197,7 +197,8 @@ void Check_ReadSpeedLimit(unsigned int readsize)
 //    fpos_tracker = _telli64(Infile[process.startfile]);
 //　の前に
 //    Validate_fpos();
-//　を挿入している。
+//　を実行している。
+//
 //　問題がなければValidate_fpos();を削除していい。
 //
 void Validate_fpos()

@@ -1416,8 +1416,8 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
   }
 
   timeFlushD2VFile = time(NULL);
-  tickFileReadSize = 0;
-  tickFileRead_begin = system_clock::now();
+  tickReadSize_speedlimit = 0;
+  tickBeginTime_speedlimit = system_clock::now();
   /*pf_end_append*/
 
   return 0;
