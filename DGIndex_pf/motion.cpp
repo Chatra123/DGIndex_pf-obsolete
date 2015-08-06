@@ -1,29 +1,29 @@
 /* Copyright (C) 1996, MPEG Software Simulation Group. All Rights Reserved. */
 
 /*
- * Disclaimer of Warranty
- *
- * These software programs are available to the user without any license fee or
- * royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
- * any and all warranties, whether express, implied, or statuary, including any
- * implied warranties or merchantability or of fitness for a particular
- * purpose.  In no event shall the copyright-holder be liable for any
- * incidental, punitive, or consequential damages of any kind whatsoever
- * arising from the use of these programs.
- *
- * This disclaimer of warranty extends to the user of these programs and user's
- * customers, employees, agents, transferees, successors, and assigns.
- *
- * The MPEG Software Simulation Group does not represent or warrant that the
- * programs furnished hereunder are free of infringement of any third-party
- * patents.
- *
- * Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
- * are subject to royalty fees to patent holders.  Many of these patents are
- * general enough such that they are unavoidable regardless of implementation
- * design.
- *
- */
+* Disclaimer of Warranty
+*
+* These software programs are available to the user without any license fee or
+* royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
+* any and all warranties, whether express, implied, or statuary, including any
+* implied warranties or merchantability or of fitness for a particular
+* purpose.  In no event shall the copyright-holder be liable for any
+* incidental, punitive, or consequential damages of any kind whatsoever
+* arising from the use of these programs.
+*
+* This disclaimer of warranty extends to the user of these programs and user's
+* customers, employees, agents, transferees, successors, and assigns.
+*
+* The MPEG Software Simulation Group does not represent or warrant that the
+* programs furnished hereunder are free of infringement of any third-party
+* patents.
+*
+* Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
+* are subject to royalty fees to patent holders.  Many of these patents are
+* general enough such that they are unavoidable regardless of implementation
+* design.
+*
+*/
 
 #include "global.h"
 #include "getbit.h"
@@ -99,7 +99,7 @@ void motion_vector(int *PMV, int *dmvector, int h_r_size, int v_r_size,
 /* calculate motion vector component */
 /* ISO/IEC 13818-2 section 7.6.3.1: Decoding the motion vectors */
 /* Note: the arithmetic here is more elegant than that which is shown
-   in 7.6.3.1.  The end results (PMV[][][]) should, however, be the same.  */
+in 7.6.3.1.  The end results (PMV[][][]) should, however, be the same.  */
 static void decode_motion_vector(int *pred, int r_size, int motion_code,
   int motion_residual, int full_pel_vector)
 {

@@ -1,31 +1,35 @@
 /*
- *  Mutated into DGIndex. Modifications Copyright (C) 2004-2008, Donald Graft
- *
- *  Copyright (C) Chia-chen Kuo - April 2001
- *
- *  This file is part of DVD2AVI, a free MPEG-2 decoder
- *
- *  DVD2AVI is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  DVD2AVI is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *
- */
+*  Mutated into DGIndex. Modifications Copyright (C) 2004-2008, Donald Graft
+*
+*  Copyright (C) Chia-chen Kuo - April 2001
+*
+*  This file is part of DVD2AVI, a free MPEG-2 decoder
+*
+*  DVD2AVI is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2, or (at your option)
+*  any later version.
+*
+*  DVD2AVI is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with GNU Make; see the file COPYING.  If not, write to
+*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+*
+*/
 #define _WIN32_WINNT 0x0501 // Needed for WM_MOUSEWHEEL
 
 #include <windows.h>
 #include <tchar.h>
 #include "resource.h"
 #include "Shlwapi.h"
+
+/*pf_append*/
+#include <list>
+#include <share.h>										//_SH_DENYWR			line1140
 
 #define GLOBAL
 #include "global.h"
@@ -164,7 +168,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
   MSG msg;
   HACCEL hAccel;
-
   int i;
   char *ptr;
   char ucCmdLine[4096];
@@ -254,7 +257,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HDDisplay = HD_DISPLAY_SHRINK_BY_HALF;
     for (i = 0; i < 4; i++)
       mMRUList[i][0] = 0;
-    InfoLog_Flag = 1;
+    InfoLog_Flag = 0;		/*pf_end_append*/
     BMPPathString[0] = 0;
     UseMPAExtensions = 0;
     NotifyWhenDone = 0;
@@ -468,7 +471,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
   stopWaitTime = 5000;
 
-  // Command line init.
+  //Command line init.
   strcpy(ucCmdLine, lpCmdLine);
   _strupr(ucCmdLine);
 
@@ -594,6 +597,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
         ptr++;
       }
+
       // Sort the filenames.
       n = NumLoadedFiles;
       for (i = 0; i < n - 1; i++)
@@ -669,6 +673,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
+
+    //if (Flg_ExitProcess) break;
   }
 
   return msg.wParam;
@@ -1021,7 +1027,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case IDM_PLAY:
       if (!Check_Flag)
       {
-        MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
+        //MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
+
+        if (Mode_NoDialoge == false)/*pf_append*/
+          MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
       }
       else if (IsWindowEnabled(hTrack))
       {
@@ -1073,7 +1082,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     proceed:
       if (!Check_Flag)
       {
-        MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
+        //MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
+
+        if (Mode_NoDialoge == false)/*pf_append*/
+          MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
+
         if (ExitOnEnd)
           exit(EXIT_FAILURE);
         break;
@@ -1086,6 +1099,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           "Your stream is %s and has a frame rate of %.3f.\n"
           "Do you want to do it anyway?",
           mpeg_type == IS_MPEG1 ? "MPEG1" : "MPEG2", frame_rate);
+
         if (MessageBox(hWnd, buf, "Force Film Warning", MB_YESNO | MB_ICONWARNING) != IDYES)
           break;
       }
@@ -1094,7 +1108,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         sprintf(szBuffer, "%s.d2v", szOutput);
         if (CLIActive)
         {
-          if ((D2VFile = fopen(szBuffer, "w+")) == 0)
+          ////if ((D2VFile = fopen(szBuffer, "w+")) == 0)
+          if ((D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR)) == 0)													/*pf_append*/
           {
             if (ExitOnEnd)
             {
@@ -1112,7 +1127,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-          if (D2VFile = fopen(szBuffer, "r"))
+          ////	if (D2VFile = fopen(szBuffer, "r"))
+          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))													/*pf_append*/
           {
             char line[255];
 
@@ -1122,7 +1138,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
               MB_YESNO | MB_ICONWARNING) != IDYES)
               break;
           }
-          D2VFile = fopen(szBuffer, "w+");
+          ////D2VFile = fopen(szBuffer, "w+");
+          D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR);													/*pf_append*/
           strcpy(D2VFilePath, szBuffer);
         }
 
@@ -1193,13 +1210,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         char line[2048];
         int D2Vformat;
 
-        D2VFile = fopen(szInput, "r");
+        ////D2VFile = fopen(szInput, "r");
+        D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR);													/*pf_append*/
 
         // Validate the D2V file.
         fgets(line, 2048, D2VFile);
         if (strncmp(line, "DGIndexProjectFile", 18) != 0)
         {
-          MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
+          if (Mode_NoDialoge == false)/*pf_append*/
+            MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
+
+          //MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
           fclose(D2VFile);
           break;
         }
@@ -2002,20 +2023,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           Info_Flag = false;
         }
         //                      if ((process.file < process.rightfile) || (process.file==process.rightfile && process.lba<process.rightlba))
-                        {
-                          process.leftfile = process.file;
-                          process.leftlba = process.lba;
+          {
+            process.leftfile = process.file;
+            process.leftlba = process.lba;
 
-                          process.run = 0;
-                          for (i = 0; i < process.leftfile; i++)
-                            process.run += Infilelength[i];
-                          process.trackleft = ((process.run + process.leftlba * SECTOR_SIZE) * TRACK_PITCH / Infiletotal);
+            process.run = 0;
+            for (i = 0; i < process.leftfile; i++)
+              process.run += Infilelength[i];
+            process.trackleft = ((process.run + process.leftlba * SECTOR_SIZE) * TRACK_PITCH / Infiletotal);
 
-                          SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackleft);
-                          InvalidateRect(hwndSelect, NULL, TRUE);
-                          //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
-                        }
-                        InvalidateRect(hwndSelect, NULL, TRUE);
+            SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackleft);
+            InvalidateRect(hwndSelect, NULL, TRUE);
+            //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
+          }
+          InvalidateRect(hwndSelect, NULL, TRUE);
       }
       break;
 
@@ -2075,20 +2096,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           Info_Flag = false;
         }
         //                      if ((process.file>process.leftfile) || (process.file==process.leftfile && process.lba>process.leftlba))
-                        {
-                          process.rightfile = process.file;
-                          process.rightlba = process.lba;
+          {
+            process.rightfile = process.file;
+            process.rightlba = process.lba;
 
-                          process.run = 0;
-                          for (i = 0; i < process.rightfile; i++)
-                            process.run += Infilelength[i];
-                          process.trackright = ((process.run + (__int64)process.rightlba*SECTOR_SIZE)*TRACK_PITCH / Infiletotal);
+            process.run = 0;
+            for (i = 0; i < process.rightfile; i++)
+              process.run += Infilelength[i];
+            process.trackright = ((process.run + (__int64)process.rightlba*SECTOR_SIZE)*TRACK_PITCH / Infiletotal);
 
-                          SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackright);
-                          InvalidateRect(hwndSelect, NULL, TRUE);
-                          //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
-                        }
-                        InvalidateRect(hwndSelect, NULL, TRUE);
+            SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackright);
+            InvalidateRect(hwndSelect, NULL, TRUE);
+            //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
+          }
+          InvalidateRect(hwndSelect, NULL, TRUE);
       }
       break;
 
@@ -2491,26 +2512,26 @@ LRESULT CALLBACK DetectPids(HWND hDialog, UINT message, WPARAM wParam, LPARAM lP
       sprintf(msg, "Could not find PAT/PMT tables!");
       SendDlgItemMessage(hDialog, IDC_PID_LISTBOX, LB_ADDSTRING, 0, (LPARAM)msg);
     }
-            {
-              char pid_string[16];
-              if (MPEG2_Transport_VideoPID != 2)
-              {
-                sprintf(pid_string, "0x%X", MPEG2_Transport_VideoPID);
-                SetDlgItemText(hDialog, IDC_SELECT_VIDEO_PID, pid_string);
-              }
-              if (MPEG2_Transport_AudioPID != 2)
-              {
-                sprintf(pid_string, "0x%X", MPEG2_Transport_AudioPID);
-                SetDlgItemText(hDialog, IDC_SELECT_AUDIO_PID, pid_string);
-              }
-              if (MPEG2_Transport_PCRPID != 2)
-              {
-                sprintf(pid_string, "0x%X", MPEG2_Transport_PCRPID);
-                SetDlgItemText(hDialog, IDC_SELECT_PCR_PID, pid_string);
-              }
-            }
-            lang = LoadDialogLanguageSettings(hDialog, DIALOG_DETECT_PIDS);
-            return true;
+    {
+      char pid_string[16];
+      if (MPEG2_Transport_VideoPID != 2)
+      {
+        sprintf(pid_string, "0x%X", MPEG2_Transport_VideoPID);
+        SetDlgItemText(hDialog, IDC_SELECT_VIDEO_PID, pid_string);
+      }
+      if (MPEG2_Transport_AudioPID != 2)
+      {
+        sprintf(pid_string, "0x%X", MPEG2_Transport_AudioPID);
+        SetDlgItemText(hDialog, IDC_SELECT_AUDIO_PID, pid_string);
+      }
+      if (MPEG2_Transport_PCRPID != 2)
+      {
+        sprintf(pid_string, "0x%X", MPEG2_Transport_PCRPID);
+        SetDlgItemText(hDialog, IDC_SELECT_PCR_PID, pid_string);
+      }
+    }
+    lang = LoadDialogLanguageSettings(hDialog, DIALOG_DETECT_PIDS);
+    return true;
 
   case WM_COMMAND:
     switch (LOWORD(wParam))
@@ -2927,9 +2948,63 @@ void ThreadKill(int mode)
     if (MuxFile > 0 && MuxFile != (FILE *)0xffffffff)
     {
       void StopVideoDemux(void);
-
       StopVideoDemux();
     }
+
+    //==========================================================================
+    /*pf_append*/
+    //ファイル終端が確定したので書き換え
+    if (D2V_Flag && Mode_Stdin)
+    {
+      std::list<char*> text;
+      fclose(D2VFile);
+
+      //全行読み込み
+      D2VFile = _fsopen(D2VFilePath, "r", _SH_DENYWR);
+      if (D2VFile)
+      {
+        char line[512];
+        while (fgets(line, 512, D2VFile) != NULL)
+        {
+          if (strncmp(line, "Location=0,0,0,0", 16) == 0)
+          {
+            // rightlba　更新
+            __int64 rightlba = (int)(fpos_tracker / SECTOR_SIZE);
+            sprintf(line, "Location=0,0,0,%I64x\n", rightlba);
+          }
+
+          //copy line
+          size_t len = strlen(line);
+          char *newline = new char[len + 1];
+          strncpy(newline, line, len + 1);
+          text.push_back(newline);
+        }
+      }
+
+      //再書き込み
+      fclose(D2VFile);
+      D2VFile = _fsopen(D2VFilePath, "w", _SH_DENYWR);
+      if (D2VFile)
+      {
+        while (0 < text.size())
+        {
+          fputs(text.front(), D2VFile);
+          delete text.front();
+          text.front() = NULL;
+          text.pop_front();
+        }
+      }
+    }
+
+    //一時ファイル削除、２回目のThreadKill(int)で削除
+    if (Mode_Stdin && HasExtraData_fromStdin)
+    {
+      _close(fdStdinTmpFile);
+      remove(StdinTmpFile_Path);
+    }
+
+    /*pf_end_append*/
+    //==========================================================================
 
     _fcloseall();
 
@@ -4489,6 +4564,7 @@ void UpdateWindowText(int mode)
     sprintf(szBuffer, "%d:%02d:%02d", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60);
     SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
 
+    if (Mode_Stdin) remain = 0;
     sprintf(szBuffer, "%d:%02d:%02d", remain / 3600, (remain % 3600) / 60, remain % 60);
     SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
 

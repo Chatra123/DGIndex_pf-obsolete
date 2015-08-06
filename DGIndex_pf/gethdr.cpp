@@ -1,29 +1,29 @@
 /* Copyright (C) 1996, MPEG Software Simulation Group. All Rights Reserved. */
 
 /*
- * Disclaimer of Warranty
- *
- * These software programs are available to the user without any license fee or
- * royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
- * any and all warranties, whether express, implied, or statuary, including any
- * implied warranties or merchantability or of fitness for a particular
- * purpose.  In no event shall the copyright-holder be liable for any
- * incidental, punitive, or consequential damages of any kind whatsoever
- * arising from the use of these programs.
- *
- * This disclaimer of warranty extends to the user of these programs and user's
- * customers, employees, agents, transferees, successors, and assigns.
- *
- * The MPEG Software Simulation Group does not represent or warrant that the
- * programs furnished hereunder are free of infringement of any third-party
- * patents.
- *
- * Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
- * are subject to royalty fees to patent holders.  Many of these patents are
- * general enough such that they are unavoidable regardless of implementation
- * design.
- *
- */
+* Disclaimer of Warranty
+*
+* These software programs are available to the user without any license fee or
+* royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
+* any and all warranties, whether express, implied, or statuary, including any
+* implied warranties or merchantability or of fitness for a particular
+* purpose.  In no event shall the copyright-holder be liable for any
+* incidental, punitive, or consequential damages of any kind whatsoever
+* arising from the use of these programs.
+*
+* This disclaimer of warranty extends to the user of these programs and user's
+* customers, employees, agents, transferees, successors, and assigns.
+*
+* The MPEG Software Simulation Group does not represent or warrant that the
+* programs furnished hereunder are free of infringement of any third-party
+* patents.
+*
+* Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
+* are subject to royalty fees to patent holders.  Many of these patents are
+* general enough such that they are unavoidable regardless of implementation
+* design.
+*
+*/
 
 #include "global.h"
 #include "getbit.h"
@@ -153,6 +153,16 @@ int Get_Hdr(int mode)
     code = Show_Bits(32);
     switch (code)
     {
+      /*
+      pf_append
+      ドロップの多いファイルでフリーズしたので少し変更。
+      0x1beを永遠と読込み続けて無限ループになったのでGet_Bits(32);で先に進める。
+      */
+      //case 0x1be:
+      //  Get_Bits(32);
+      //  break;
+
+      /*pf_off*/
     case 0x1be:
       break;
 
@@ -447,10 +457,24 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
       process.lba = d2v_current.lba;
     }
 
-    // This triggers if we reach the right marker position.
-    if (CurrentFile == process.endfile && process.startloc >= process.endloc)       // D2V END
+    //// This triggers if we reach the right marker position.
+    //if (CurrentFile==process.endfile && process.startloc>=process.endloc)       // D2V END
+    //{
+    //	ThreadKill(END_OF_DATA_KILL);
+    //}
+
+    //pf_append
+    if (Mode_Stdin)
     {
-      ThreadKill(END_OF_DATA_KILL);
+      if (IsClosed_stdin)
+        ThreadKill(END_OF_DATA_KILL);
+    }
+    else
+    {
+      if (CurrentFile == process.endfile && process.startloc >= process.endloc)       // D2V END
+      {
+        ThreadKill(END_OF_DATA_KILL);
+      }
     }
 
     if (Info_Flag)
@@ -777,7 +801,7 @@ static void picture_display_extension()
   int number_of_frame_center_offsets;
 
   /* based on ISO/IEC 13818-2 section 6.3.12
-     (November 1994) Picture display extensions */
+  (November 1994) Picture display extensions */
 
   /* derive number_of_frame_center_offsets */
   if (progressive_sequence)

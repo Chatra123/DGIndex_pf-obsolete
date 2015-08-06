@@ -1,29 +1,29 @@
 /* Copyright (C) 1996, MPEG Software Simulation Group. All Rights Reserved. */
 
 /*
- * Disclaimer of Warranty
- *
- * These software programs are available to the user without any license fee or
- * royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
- * any and all warranties, whether express, implied, or statuary, including any
- * implied warranties or merchantability or of fitness for a particular
- * purpose.  In no event shall the copyright-holder be liable for any
- * incidental, punitive, or consequential damages of any kind whatsoever
- * arising from the use of these programs.
- *
- * This disclaimer of warranty extends to the user of these programs and user's
- * customers, employees, agents, transferees, successors, and assigns.
- *
- * The MPEG Software Simulation Group does not represent or warrant that the
- * programs furnished hereunder are free of infringement of any third-party
- * patents.
- *
- * Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
- * are subject to royalty fees to patent holders.  Many of these patents are
- * general enough such that they are unavoidable regardless of implementation
- * design.
- *
- */
+* Disclaimer of Warranty
+*
+* These software programs are available to the user without any license fee or
+* royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
+* any and all warranties, whether express, implied, or statuary, including any
+* implied warranties or merchantability or of fitness for a particular
+* purpose.  In no event shall the copyright-holder be liable for any
+* incidental, punitive, or consequential damages of any kind whatsoever
+* arising from the use of these programs.
+*
+* This disclaimer of warranty extends to the user of these programs and user's
+* customers, employees, agents, transferees, successors, and assigns.
+*
+* The MPEG Software Simulation Group does not represent or warrant that the
+* programs furnished hereunder are free of infringement of any third-party
+* patents.
+*
+* Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
+* are subject to royalty fees to patent holders.  Many of these patents are
+* general enough such that they are unavoidable regardless of implementation
+* design.
+*
+*/
 #include <windows.h>
 #include <commctrl.h>
 #include <stdio.h>
@@ -37,6 +37,16 @@
 #include "misc.h"
 #include "resource.h"
 #include "pat.h"
+
+/*pf_append*/
+#include <thread>
+#include <chrono>
+using namespace std::chrono;
+
+//log
+#include <fstream>
+#include <iostream>
+/*pf_end_append*/
 
 #ifdef GLOBAL
 #define XTN
@@ -291,6 +301,58 @@ XTN bool Display_Flag;
 XTN int Fault_Flag;
 XTN int CurrentFile;
 XTN int NumLoadedFiles;
+
+//====================================================
+/*pf_append*/
+//Mode
+XTN bool Mode_Stdin;                             //read from file or stdin
+XTN bool Mode_UseBad;                            //Ignore field order transition
+XTN bool Mode_NoDialoge;                         //suspend some dialoge
+
+//Stdin
+XTN int fdStdin;
+//XTN FILE* fpStdin;
+XTN __int64 fpos_tracker;                        //標準入力ストリーム＆一時ファイルを意識しないソースファイル上のポジション
+XTN char Stdin_SourcePath[DG_MAX_PATH];          //d2vファイル３行目に書き込むファイル名
+XTN bool IsClosed_stdin;
+
+//StdinTmpFileから読込む段階なのに標準入力から読込んだか。
+//trueならプロセス終了、StdinTmpFile_Sizeを増やして対応する。
+//morebuffLogで通知する。
+XTN bool HasExtraData_fromStdin;
+XTN bool Flg_Exist_morebuffLog;
+
+//func
+XTN int Initialize_stdin(void);
+//XTN int read_stdin_fp(void *buff, int);
+XTN int read_stdin_fd(void *buff, int);
+XTN void Validate_fpos(void);
+
+//StdinTmpFile
+//　ストリーム先頭部分をファイルとして取り出す
+XTN int fdStdinTmpFile;
+XTN char* StdinTmpFile_Path;                     //一時ファイルのパス
+XTN int StdinTmpFile_Size;                       //              サイズ
+XTN double StdinTmpFileSize_byArg;               //引数指定によるサイズ
+
+//d2vファイル
+XTN time_t timeFlushD2VFile;                     //d2vファイルを更新した時間
+
+//読込速度
+XTN double tickFileReadSize;                     //単位時間に読み込んだファイル量
+XTN double ReadSpeedLimit_byArg;                 //速度上限  byte/sec
+XTN time_point<system_clock, system_clock::duration> tickFileRead_begin;  //tickの開始時間
+XTN void Check_ReadSpeedLimit(unsigned int readsize);
+
+//ログ           デバッグ用
+XTN std::ofstream pfLogger;
+XTN char LogTimeCode[32];
+XTN void Refresh_LogTimeCode();
+XTN __int64 LastReadByte;
+
+/*pf_end_append*/
+//====================================================
+
 XTN int FO_Flag;
 XTN int iDCT_Flag;
 XTN bool Info_Flag;
@@ -786,8 +848,8 @@ XTN VLCtab DCchromtab1[32]
 ;
 
 /* Table B-14, DCT coefficients table zero,
- * codes 0100 ... 1xxx (used for first (DC) coefficient)
- */
+* codes 0100 ... 1xxx (used for first (DC) coefficient)
+*/
 XTN DCTtab DCTtabfirst[12]
 #ifdef GLOBAL
 =
@@ -800,8 +862,8 @@ XTN DCTtab DCTtabfirst[12]
 ;
 
 /* Table B-14, DCT coefficients table zero,
- * codes 0100 ... 1xxx (used for all other coefficients)
- */
+* codes 0100 ... 1xxx (used for all other coefficients)
+*/
 XTN DCTtab DCTtabnext[12]
 #ifdef GLOBAL
 =
@@ -814,8 +876,8 @@ XTN DCTtab DCTtabnext[12]
 ;
 
 /* Table B-14, DCT coefficients table zero,
- * codes 000001xx ... 00111xxx
- */
+* codes 000001xx ... 00111xxx
+*/
 XTN DCTtab DCTtab0[60]
 #ifdef GLOBAL
 =
@@ -840,8 +902,8 @@ XTN DCTtab DCTtab0[60]
 ;
 
 /* Table B-15, DCT coefficients table one,
- * codes 000001xx ... 11111111
- */
+* codes 000001xx ... 11111111
+*/
 XTN DCTtab DCTtab0a[252]
 #ifdef GLOBAL
 =
@@ -914,8 +976,8 @@ XTN DCTtab DCTtab0a[252]
 ;
 
 /* Table B-14, DCT coefficients table zero,
- * codes 0000001000 ... 0000001111
- */
+* codes 0000001000 ... 0000001111
+*/
 XTN DCTtab DCTtab1[8]
 #ifdef GLOBAL
 =
@@ -927,8 +989,8 @@ XTN DCTtab DCTtab1[8]
 ;
 
 /* Table B-15, DCT coefficients table one,
- * codes 000000100x ... 000000111x
- */
+* codes 000000100x ... 000000111x
+*/
 XTN DCTtab DCTtab1a[8]
 #ifdef GLOBAL
 =
@@ -940,8 +1002,8 @@ XTN DCTtab DCTtab1a[8]
 ;
 
 /* Table B-14/15, DCT coefficients table zero / one,
- * codes 000000010000 ... 000000011111
- */
+* codes 000000010000 ... 000000011111
+*/
 XTN DCTtab DCTtab2[16]
 #ifdef GLOBAL
 =
@@ -955,8 +1017,8 @@ XTN DCTtab DCTtab2[16]
 ;
 
 /* Table B-14/15, DCT coefficients table zero / one,
- * codes 0000000010000 ... 0000000011111
- */
+* codes 0000000010000 ... 0000000011111
+*/
 XTN DCTtab DCTtab3[16]
 #ifdef GLOBAL
 =
@@ -970,8 +1032,8 @@ XTN DCTtab DCTtab3[16]
 ;
 
 /* Table B-14/15, DCT coefficients table zero / one,
- * codes 00000000010000 ... 00000000011111
- */
+* codes 00000000010000 ... 00000000011111
+*/
 XTN DCTtab DCTtab4[16]
 #ifdef GLOBAL
 =
@@ -985,8 +1047,8 @@ XTN DCTtab DCTtab4[16]
 ;
 
 /* Table B-14/15, DCT coefficients table zero / one,
- * codes 000000000010000 ... 000000000011111
- */
+* codes 000000000010000 ... 000000000011111
+*/
 XTN DCTtab DCTtab5[16]
 #ifdef GLOBAL
 =
@@ -1000,8 +1062,8 @@ XTN DCTtab DCTtab5[16]
 ;
 
 /* Table B-14/15, DCT coefficients table zero / one,
- * codes 0000000000010000 ... 0000000000011111
- */
+* codes 0000000000010000 ... 0000000000011111
+*/
 XTN DCTtab DCTtab6[16]
 #ifdef GLOBAL
 =

@@ -1,39 +1,308 @@
 /*
- *  Mutated into DGIndex. Modifications Copyright (C) 2004-2008, Donald Graft
- *
- *  Copyright (C) Chia-chen Kuo - April 2001
- *
- *  This file is part of DVD2AVI, a free MPEG-2 decoder
- *
- *  DVD2AVI is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  DVD2AVI is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *
- */
-
+*  Mutated into DGIndex. Modifications Copyright (C) 2004-2008, Donald Graft
+*
+*  Copyright (C) Chia-chen Kuo - April 2001
+*
+*  This file is part of DVD2AVI, a free MPEG-2 decoder
+*
+*  DVD2AVI is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2, or (at your option)
+*  any later version.
+*
+*  DVD2AVI is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with GNU Make; see the file COPYING.  If not, write to
+*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+*
+*/
+#include <exception>
 #define GETBIT_GLOBAL
 #include "global.h"
 #include "getbit.h"
 #include "AC3Dec\ac3.h"
 
+/*pf_append*/
+#include <math.h>
+#include <thread>
+#include <chrono>
+using namespace std::chrono;
+/*pf_end_append*/
+
 unsigned int start;
 
+//==========================================================================
+/*pf_off*/
+//int _donread(int fd, void *buffer, unsigned int count)
+//{
+//int bytes;
+//bytes = _read(fd, buffer, count);
+//return bytes;
+//}
+
+/*pf_append*/
 int _donread(int fd, void *buffer, unsigned int count)
 {
-  int bytes;
-  bytes = _read(fd, buffer, count);
+  unsigned int bytes = 0;
+
+  //標準入力
+  if (Mode_Stdin)
+  {
+    if (!_eof(fd))
+    {
+      //StdinTmpFile
+      bytes = _read(fd, buffer, count);
+      if (bytes != count)
+      {
+        //残りをread_stdin
+        int append = read_stdin_fd((char*)buffer + bytes, count - bytes);
+        bytes += append;
+      }
+    }
+    else
+      //標準入力
+      bytes = read_stdin_fd((char*)buffer, count);
+  }
+  else
+  {
+    //ファイル
+    bytes = _read(fd, buffer, count);
+    Check_ReadSpeedLimit(bytes);
+  }
+
+  //Log
+  //if (Mode_Stdin && IsClosed_stdin)
+  //{
+  //  char  drive[32], directory[256], filename_ts[256], ext_ts[32];
+  //  _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext_ts);
+
+  //  char logPath[256];
+  //  sprintf(logPath, "%s%s", drive, directory);
+  //  sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext_ts, ".DGI.log");
+  //  if (pfLogger) pfLogger.close();
+  //  pfLogger = std::ofstream(logPath, std::ios::app);
+
+  //  if (pfLogger)
+  //  {
+  //    Refresh_LogTimeCode();
+  //    pfLogger << std::endl;
+  //    pfLogger << "-------------------" << std::endl;
+  //    pfLogger << LogTimeCode << std::endl;
+  //    pfLogger << Stdin_SourcePath << std::endl;
+
+  //    __int64 next_fpos = fpos_tracker + bytes;
+  //    pfLogger << " IsClosed_stdin  " << std::endl;
+  //    pfLogger << "    count, bytes  =  " << count << ", " << bytes << std::endl;
+  //    pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
+  //    pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
+  //    pfLogger.close();
+  //  }
+  //}
+  LastReadByte = bytes;                //デバッグ用
+
+  fpos_tracker += bytes;               //d2vに書き込むファイル位置はfpos_trackerを元に計算する
+
   return bytes;
 }
+
+//
+//LogTimeCode更新
+//
+void Refresh_LogTimeCode()
+{
+  LogTimeCode[0] = '\0';
+  SYSTEMTIME st;
+  GetSystemTime(&st);
+
+  char szTime[25] = { 0 };
+  // wHourを９時間足して、日本時間にする
+  wsprintf(szTime, "%04d/%02d/%02d %02d:%02d:%02d %03d",
+    st.wYear, st.wMonth, st.wDay,
+    st.wHour + 9, st.wMinute, st.wSecond, st.wMilliseconds);
+
+  sprintf(LogTimeCode, "%s", szTime);
+}
+
+//
+//標準入力からデータ取得
+//  ver. file pointer       read stdin
+/*
+size_t fread(void *buf, size_t size, size_t n, FILE *fp);
+int read_stdin_fp(void *buffer, const int demandTotalSize)
+ファイル位置指示子を読み込んだデータバイト分進めます。
+エラーが発生した場合にはファイル位置指示子の値は不定です。
+
+size_t size = 2048　が失敗するとデータが消失しているようなので
+size_t size = 1にした。ＣＰＵ使用率が１０程度になる。
+*/
+//{
+//  char tmpbuff[1];
+//  int read_sum = 0;
+//
+//  while (read_sum < demandTotalSize)
+//  {
+//
+//    int readchunk = fread(tmpbuff, 1, 1, fpStdin);
+//    if (readchunk == 0)
+//    {
+//      IsClosed_stdin = true;
+//      break;
+//    }
+//
+//    memcpy((char*)buffer + read_sum, tmpbuff, readchunk);
+//    read_sum += readchunk;
+//
+//  }
+//
+//  HasExtraData_fromStdin = true;
+//  return read_sum;
+//}
+
+//
+//標準入力からデータ取得
+//  ver. file descriptor    read stdin
+int read_stdin_fd(void *buffer, const int demandTotalSize)
+{
+  int read_sum = 0;
+
+  while (read_sum < demandTotalSize)
+  {
+    char tmpbuff[2048];
+    int tickDemandSize = demandTotalSize - read_sum;
+
+    int readsize = _read(fdStdin, tmpbuff, tickDemandSize);
+    if (readsize == -1)
+    {
+      // If fd is invalid
+      // If execution is allowed to continue, the function returns -1 and sets errno to EBADF.
+      IsClosed_stdin = true;
+      return 0;
+    }
+    else if (readsize == 0)
+    {
+      IsClosed_stdin = true;
+      break;                           //パイプ終端、接続切断
+    }
+
+    memcpy((char*)buffer + read_sum, tmpbuff, readsize);
+    read_sum += readsize;
+  }
+
+  HasExtraData_fromStdin = true;
+  return read_sum;
+}
+
+//
+//ファイル読込速度制限
+//
+void Check_ReadSpeedLimit(unsigned int readsize)
+{
+  if (0 < ReadSpeedLimit_byArg)
+  {
+    tickFileReadSize += readsize;                                        //単位時間の読込み量
+    auto tickDuration = system_clock::now() - tickFileRead_begin;        //計測時間
+    auto duration_ms = duration_cast<std::chrono::milliseconds>(tickDuration).count();
+
+    if (200 < duration_ms)
+    {
+      //単位時間ごとにカウンタリセット
+      tickFileRead_begin = system_clock::now();
+      tickFileReadSize = 0;
+    }
+
+    //制限をこえたらsleep_for
+    if (ReadSpeedLimit_byArg * (200.0 / 1000.0) < tickFileReadSize)        //byte/sec
+      std::this_thread::sleep_for(std::chrono::milliseconds(200 - duration_ms));
+  }
+}
+
+//
+//デバッグ用
+//fpos_trackerの整合性をチェック
+//
+//　_lseeki64 呼び出し時に標準入力から追加のデータを取得していないことを確認する。
+//　_lseeki64 でファイルポジションを先頭にもどすので追加のデータを取得していたらダメ。
+//
+//
+//		_lseeki64(Infile[0], 0, SEEK_SET);
+//    fpos_tracker = _telli64(Infile[process.startfile]);
+//　の前に
+//    Validate_fpos();
+//　を挿入している。
+//　問題がなければValidate_fpos();を削除していい。
+//
+void Validate_fpos()
+{
+  //*pf_append*/
+  if (HasExtraData_fromStdin)
+  {
+    //エラー
+    //StdinTmpFile_Sizeを大きくしてください。
+    //  fpos_tracker < StdinTmpFile_Size   にする
+    if (Flg_Exist_morebuffLog == false)
+    {
+      if (Mode_Stdin && IsClosed_stdin)
+      {
+        char  drive[32], directory[256], filename_ts[256], ext[32];
+        _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
+
+        char logPath[256];
+        sprintf(logPath, "%s%s", drive, directory);
+        sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext, ".DGI.log");
+        if (pfLogger) pfLogger.close();
+        pfLogger = std::ofstream(logPath, std::ios::app);
+
+        if (pfLogger)
+        {
+          Refresh_LogTimeCode();
+          pfLogger << std::endl;
+          pfLogger << "-------------------" << std::endl;
+          pfLogger << LogTimeCode << std::endl;
+          pfLogger << Stdin_SourcePath << std::endl;
+
+          __int64 next_fpos = fpos_tracker + LastReadByte;
+          pfLogger << " IsClosed_stdin  " << std::endl;
+          pfLogger << "    LastReadByte  =  " << LastReadByte << std::endl;
+          pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
+          pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
+          pfLogger.close();
+        }
+      }
+
+      char  drive[32], directory[256], filename_ts[256], ext[32];
+      _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
+
+      char logPath[512];
+      sprintf(logPath, "%s%s", drive, directory);
+      sprintf(logPath, "%s%s%s%s%s", logPath, "morebuff__", filename_ts, ext, ".DGI.log");
+
+      std::ofstream logger = std::ofstream(logPath, std::ios::app);
+
+      if (logger)
+      {
+        Refresh_LogTimeCode();
+        logger << std::endl;
+        logger << "-------------------" << std::endl;
+        logger << LogTimeCode << std::endl;
+        logger << Stdin_SourcePath << std::endl;
+        logger << "   getbit.cpp    Line 293 " << std::endl;
+        logger << "   fpos_tracker < StdinTmpFile_Size   にする  " << std::endl;
+        logger << "   fpos_tracker      =  " << fpos_tracker << std::endl;
+        logger << "   StdinTmpFile_Size =  " << StdinTmpFile_Size << std::endl;
+      }
+      logger.close();
+      Flg_Exist_morebuffLog = true;
+    }
+  }
+  /*pf_end_append*/
+}
+
+/*pf_end_append*/
+//==========================================================================
 
 #define MONO 3
 #define STEREO 0
@@ -132,58 +401,58 @@ FILE *OpenAudio(char *path, char *mode, unsigned int id)
 }
 
 #define LOCATE                                                  \
-  while (Rdptr >= (Rdbfr + BUFFER_SIZE))                          \
-  {                                                               \
-    Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);   \
-    if (Read < BUFFER_SIZE) Next_File();                        \
-    Rdptr -= BUFFER_SIZE;                                       \
-  }
+                                              		while (Rdptr >= (Rdbfr + BUFFER_SIZE))                          \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                               \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);   \
+if (Read < BUFFER_SIZE) Next_File();                        \
+Rdptr -= BUFFER_SIZE;                                       \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}
 
 #define DECODE_AC3                                                              \
 {                                                                               \
-    if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
-        Packet_Length -= 16;                                                    \
-    size = 0;                                                                   \
-        while (Packet_Length > 0)                                                   \
-            {                                                                           \
-        if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
-                {                                                                       \
-            size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size);       \
-            Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
-            Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
-            if (Read < BUFFER_SIZE) Next_File();                                \
-            Rdptr = Rdbfr;                                                      \
-                }                                                                       \
-                else                                                                    \
-        {                                                                       \
-            size = ac3_decode_data(Rdptr, Packet_Length, size);                 \
-            Rdptr += Packet_Length;                                             \
-            Packet_Length = 0;                                                  \
-        }                                                                       \
-            }                                                                           \
+if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
+Packet_Length -= 16;                                                    \
+size = 0;                                                                   \
+                                              		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
+{                                                                       \
+size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size);       \
+Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
+if (Read < BUFFER_SIZE) Next_File();                                \
+Rdptr = Rdbfr;                                                      \
+}                                                                       \
+else                                                                    \
+{                                                                       \
+size = ac3_decode_data(Rdptr, Packet_Length, size);                 \
+Rdptr += Packet_Length;                                             \
+Packet_Length = 0;                                                  \
+}                                                                       \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
 }
 
 #define DEMUX_AC3                                                               \
 {                                                                               \
-    if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
-        Packet_Length -= 16;                                                    \
-            while (Packet_Length > 0)                                                   \
-                {                                                                           \
-        if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
-                {                                                                       \
-            fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
-            Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
-            Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
-            if (Read < BUFFER_SIZE) Next_File();                                \
-            Rdptr = Rdbfr;                                                      \
-                }                                                                       \
-                else                                                                    \
-        {                                                                       \
-            fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
-            Rdptr += Packet_Length;                                             \
-            Packet_Length = 0;                                                  \
-        }                                                                       \
-                }                                                                           \
+if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
+Packet_Length -= 16;                                                    \
+                                              		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
+{                                                                       \
+fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
+Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
+if (Read < BUFFER_SIZE) Next_File();                                \
+Rdptr = Rdbfr;                                                      \
+}                                                                       \
+else                                                                    \
+{                                                                       \
+fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
+Rdptr += Packet_Length;                                             \
+Packet_Length = 0;                                                  \
+}                                                                       \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
 }
 
 void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsigned char format)
@@ -264,48 +533,48 @@ void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsign
 
 #define DEMUX_MPA_AAC(fp)                                                       \
 do {                                                                            \
-    if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
-        Packet_Length -= 16;                                                    \
-            while (Packet_Length > 0)                                                   \
-                {                                                                           \
-        if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
-                {                                                                       \
-            fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));                    \
-            Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
-            Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
-            if (Read < BUFFER_SIZE) Next_File();                                \
-            Rdptr = Rdbfr;                                                      \
-                }                                                                       \
-                else                                                                    \
-        {                                                                       \
-            fwrite(Rdptr, Packet_Length, 1, (fp));                              \
-            Rdptr += Packet_Length;                                             \
-            Packet_Length = 0;                                                  \
-        }                                                                       \
-                }                                                                           \
+if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
+Packet_Length -= 16;                                                    \
+                                              		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
+{                                                                       \
+fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));                    \
+Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
+if (Read < BUFFER_SIZE) Next_File();                                \
+Rdptr = Rdbfr;                                                      \
+}                                                                       \
+else                                                                    \
+{                                                                       \
+fwrite(Rdptr, Packet_Length, 1, (fp));                              \
+Rdptr += Packet_Length;                                             \
+Packet_Length = 0;                                                  \
+}                                                                       \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
 } while( 0 )
 
 #define DEMUX_DTS                                                               \
 {                                                                               \
-    if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
-        Packet_Length -= 16;                                                    \
-            while (Packet_Length > 0)                                                   \
-                {                                                                           \
-        if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
-                {                                                                       \
-            fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
-            Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
-            Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
-            if (Read < BUFFER_SIZE) Next_File();                                \
-            Rdptr = Rdbfr;                                                      \
-                }                                                                       \
-                else                                                                    \
-        {                                                                       \
-            fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
-            Rdptr += Packet_Length;                                             \
-            Packet_Length = 0;                                                  \
-        }                                                                       \
-                }                                                                           \
+if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
+Packet_Length -= 16;                                                    \
+                                              		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
+{                                                                       \
+fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
+Packet_Length -= BUFFER_SIZE+Rdbfr-Rdptr;                           \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);           \
+if (Read < BUFFER_SIZE) Next_File();                                \
+Rdptr = Rdbfr;                                                      \
+}                                                                       \
+else                                                                    \
+{                                                                       \
+fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
+Rdptr += Packet_Length;                                             \
+Packet_Length = 0;                                                  \
+}                                                                       \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
 }
 
 static char *FTType[5] = {
@@ -402,32 +671,32 @@ void Initialize_Buffer()
 // Skips ahead in transport stream by specified number of bytes.
 #define SKIP_TRANSPORT_PACKET_BYTES(bytes_to_skip)                      \
 do {                                                                    \
-    int temp = (bytes_to_skip);                                         \
-        while (temp  > 0)                                                   \
-            {                                                                   \
-        if (temp + Rdptr > BUFFER_SIZE + Rdbfr)                         \
-                {                                                               \
-            temp  -= BUFFER_SIZE + Rdbfr - Rdptr;                       \
-            Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);   \
-            if (Read < BUFFER_SIZE) Next_File();                        \
-            Rdptr = Rdbfr;                                              \
-                }                                                               \
-                else                                                            \
-        {                                                               \
-            Rdptr += temp;                                              \
-            temp = 0;                                                   \
-        }                                                               \
-            }                                                                   \
-    Packet_Length -= (bytes_to_skip);                                   \
+int temp = (bytes_to_skip);                                         \
+                                              		while (temp  > 0)\
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                   \
+if (temp + Rdptr > BUFFER_SIZE + Rdbfr)                         \
+{                                                               \
+temp  -= BUFFER_SIZE + Rdbfr - Rdptr;                       \
+Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);   \
+if (Read < BUFFER_SIZE) Next_File();                        \
+Rdptr = Rdbfr;                                              \
+}                                                               \
+else                                                            \
+{                                                               \
+Rdptr += temp;                                              \
+temp = 0;                                                   \
+}                                                               \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                   \
+Packet_Length -= (bytes_to_skip);                                   \
 } while (0)
 
 #define GET_PES_TIMESTAMP(ts, b1, b2, b3, b4, b5)       \
 do {                                                    \
-    ts = (__int64) (b1 & 0x0e) << 29                    \
-                 | (b2       ) << 22                    \
-                 | (b3 & 0xfe) << 14                    \
-                 | (b4       ) <<  7                    \
-                 | (b5       ) >>  1;                   \
+ts = (__int64) (b1 & 0x0e) << 29                    \
+| (b2       ) << 22                    \
+| (b3 & 0xfe) << 14                    \
+| (b4       ) <<  7                    \
+| (b5       ) >>  1;                   \
 } while (0)
 
 // Transport packet data structure.
@@ -486,14 +755,21 @@ void Next_Transport_Packet()
   static unsigned int prev_code;
   bool pmt_check = false;
   unsigned int check_num_pmt = 0;
-  unsigned int time_limit = 5000;
+
+  //stdinで読み込むとtime_limitに引っ掛かることがあった
+  unsigned int time_limit = 5 * 60 * 1000;/*pf_append*/
+  //unsigned int time_limit = 5000;/*pf_off*/
 #ifdef _DEBUG
   time_limit = 300000;    /* Change 5 minutes. */
 #endif
-
+  int counter = 0;
   start = timeGetTime();
   for (;;)
   {
+    counter++;
+    if (counter == 30)
+      counter = 30;
+
     PES_PTS = 0;
     bytes_left = 0;
     Packet_Length = TransportPacketSize; // total length of an MPEG-2 transport packet
@@ -550,8 +826,19 @@ void Next_Transport_Packet()
     // for indexing when an I frame is detected.
     if (D2V_Flag)
     {
-      PackHeaderPosition = _telli64(Infile[CurrentFile])
-        - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 1;
+      /*pf_append*/
+      if (Mode_Stdin)
+      {
+        //D2Vファイルの各バイト位置はPackHeaderPositionを元に計算する
+        PackHeaderPosition = fpos_tracker
+          - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 1;
+      }
+      /*pf_end_append*/
+      else
+      {
+        PackHeaderPosition = _telli64(Infile[CurrentFile])
+          - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 1;
+      }
     }
     // For M2TS (blueray) files, index the extra 4 bytes in front of the sync byte,
     // because DGDecode will expect to see them.
@@ -1516,8 +1803,17 @@ void Next_PVA_Packet()
     // for indexing when an I frame is detected.
     if (D2V_Flag)
     {
-      PackHeaderPosition = _telli64(Infile[CurrentFile])
+      //PackHeaderPosition = _telli64(Infile[CurrentFile])
+      //- (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+
+      /*pf_append*/
+      if (Mode_Stdin)
+        PackHeaderPosition = fpos_tracker
         - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+      else
+        PackHeaderPosition = _telli64(Infile[CurrentFile])
+        - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+      /*pf_end_append*/
     }
 
     // Pick up the remaining packet header fields.
@@ -1764,8 +2060,17 @@ void Next_Packet()
     case PACK_START_CODE:
       if (D2V_Flag)
       {
-        PackHeaderPosition = _telli64(Infile[CurrentFile]);
-        PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
+        /*pf_append*/
+        if (Mode_Stdin)
+        {
+          PackHeaderPosition = fpos_tracker;
+          PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
+        }/*pf_end_append*/
+        else
+        {
+          PackHeaderPosition = _telli64(Infile[CurrentFile]);
+          PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
+        }
       }
       if (((tmp = Get_Byte()) & 0xf0) == 0x20)
       {
@@ -2944,7 +3249,11 @@ void UpdateInfo()
     }
     processed += _telli64(Infile[CurrentFile]);
     processed *= TRACK_PITCH;
-    processed /= Infiletotal;
+
+    //processed /= Infiletotal;/*pf_off*/
+    if (Mode_Stdin) processed = -1;/*pf_append*/
+    else processed /= Infiletotal;/*pf_append*/
+
     trackpos = (int)processed;
     SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, trackpos);
     InvalidateRect(hwndSelect, NULL, TRUE);
