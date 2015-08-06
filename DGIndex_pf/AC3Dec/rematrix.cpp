@@ -23,46 +23,46 @@
 
 struct rematrix_band_s
 {
-    uint_32 start;
-    uint_32 end;
+  uint_32 start;
+  uint_32 end;
 };
 
-static struct rematrix_band_s rematrix_band[] = {{13,24}, {25,36}, {37,60}, {61,252}};
+static struct rematrix_band_s rematrix_band[] = { { 13, 24 }, { 25, 36 }, { 37, 60 }, { 61, 252 } };
 
 /* This routine simply does stereo rematixing for the 2 channel stereo mode */
 void rematrix(audblk_t *audblk, stream_samples_t samples)
 {
-    uint_32 num_bands;
-    uint_32 start;
-    uint_32 end;
-    uint_32 i, j;
-    double left, right;
+  uint_32 num_bands;
+  uint_32 start;
+  uint_32 end;
+  uint_32 i, j;
+  double left, right;
 
-    if(!audblk->cplinu || audblk->cplbegf > 2)
-        num_bands = 4;
-    else if (audblk->cplbegf > 0)
-        num_bands = 3;
+  if (!audblk->cplinu || audblk->cplbegf > 2)
+    num_bands = 4;
+  else if (audblk->cplbegf > 0)
+    num_bands = 3;
+  else
+    num_bands = 2;
+
+  for (i = 0; i < num_bands; i++)
+  {
+    if (!audblk->rematflg[i])
+      continue;
+
+    start = rematrix_band[i].start;
+
+    if (i == num_bands - 1 && audblk->cplinu)
+      end = 12 * audblk->cplbegf + 36;
     else
-        num_bands = 2;
+      end = rematrix_band[i].end;
 
-    for(i=0; i<num_bands; i++)
+    for (j = start; j <= end; j++)
     {
-        if(!audblk->rematflg[i])
-            continue;
-
-        start = rematrix_band[i].start;
-
-        if (i==num_bands-1 && audblk->cplinu)
-            end = 12 * audblk->cplbegf + 36;
-        else
-            end = rematrix_band[i].end;
-
-        for (j=start; j<=end; j++)
-        {
-            left  = samples[0][j] + samples[1][j];
-            right = samples[0][j] - samples[1][j];
-            samples[0][j] = left;
-            samples[1][j] = right;
-        }
+      left = samples[0][j] + samples[1][j];
+      right = samples[0][j] - samples[1][j];
+      samples[0][j] = left;
+      samples[1][j] = right;
     }
+  }
 }

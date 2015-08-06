@@ -24,25 +24,25 @@
 
 uint_32 bitstream_get_bh(uint_32 num_bits)
 {
-    uint_32 result;
+  uint_32 result;
 
-    num_bits -= bits_left;
-    result = (current_word << (32 - bits_left)) >> (32 - bits_left);
+  num_bits -= bits_left;
+  result = (current_word << (32 - bits_left)) >> (32 - bits_left);
 
-    current_word = (*buffer_start << 24) + (*(buffer_start+1) << 16) + (*(buffer_start+2) << 8) + *(buffer_start+3);
-    buffer_start +=4;
+  current_word = (*buffer_start << 24) + (*(buffer_start + 1) << 16) + (*(buffer_start + 2) << 8) + *(buffer_start + 3);
+  buffer_start += 4;
 
-    if(num_bits != 0)
-        result = (result << num_bits) + (current_word >> (32 - num_bits));
+  if (num_bits != 0)
+    result = (result << num_bits) + (current_word >> (32 - num_bits));
 
-    bits_left = 32 - num_bits;
+  bits_left = 32 - num_bits;
 
-    return result;
+  return result;
 }
 
 void bitstream_init(uint_8 *start)
 {
-    // initialize the start of the buffer
-    buffer_start = start;
-    bits_left = 0;
+  // initialize the start of the buffer
+  buffer_start = start;
+  bits_left = 0;
 }

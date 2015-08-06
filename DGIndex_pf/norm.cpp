@@ -33,100 +33,100 @@ static void TwoPass(FILE *WaveIn, int WaveInPos, FILE *WaveOut, int WaveOutPos, 
 
 void Normalize(FILE *WaveIn, int WaveInPos, char *filename, FILE *WaveOut, int WaveOutPos, int size)
 {
-    int i, norm;
-    bool trigger = false;
-    double ratio = 1.0;
+  int i, norm;
+  bool trigger = false;
+  double ratio = 1.0;
 
-    if (Norm_Flag)
-    {
-        if (WaveIn==NULL)   // In = Out
-            WaveIn = fopen(filename, "rb");
-        else
-            TwoPass(WaveIn, WaveInPos, NULL, 0, size, 0);
+  if (Norm_Flag)
+  {
+    if (WaveIn == NULL)   // In = Out
+      WaveIn = fopen(filename, "rb");
+    else
+      TwoPass(WaveIn, WaveInPos, NULL, 0, size, 0);
 
-        ratio = 327.68 * Norm_Ratio / Sound_Max;
+    ratio = 327.68 * Norm_Ratio / Sound_Max;
 
-        if (ratio >= 1.01 || ratio < 1.0)
-            trigger = true;
-    }
-    else if (WaveIn!=NULL)
-        trigger = true;
+    if (ratio >= 1.01 || ratio < 1.0)
+      trigger = true;
+  }
+  else if (WaveIn != NULL)
+    trigger = true;
 
-    for (i=-32768; i<0; i++)
-    {
-        norm = (int)(ratio * i - 0.5);
+  for (i = -32768; i < 0; i++)
+  {
+    norm = (int)(ratio * i - 0.5);
 
-        if (norm < -32768)
-            Norm_Table[i+32768] = -32768;
-        else
-            Norm_Table[i+32768] = norm;
-    }
+    if (norm < -32768)
+      Norm_Table[i + 32768] = -32768;
+    else
+      Norm_Table[i + 32768] = norm;
+  }
 
-    Norm_Table[32768] = 0;
+  Norm_Table[32768] = 0;
 
-    for (i=1; i<32768; i++)
-    {
-        if (Norm_Table[i] > -32767)
-            Norm_Table[65536-i] = -Norm_Table[i];
-        else
-            Norm_Table[65536-i] = 32767;
-    }
+  for (i = 1; i < 32768; i++)
+  {
+    if (Norm_Table[i] > -32767)
+      Norm_Table[65536 - i] = -Norm_Table[i];
+    else
+      Norm_Table[65536 - i] = 32767;
+  }
 
-    sprintf(szBuffer, "%.2f", ratio);
-    SetDlgItemText(hDlg, IDC_INFO, szBuffer);
+  sprintf(szBuffer, "%.2f", ratio);
+  SetDlgItemText(hDlg, IDC_INFO, szBuffer);
 
-    if (trigger)
-        TwoPass(WaveIn, WaveInPos, WaveOut, WaveOutPos, size, 1);
+  if (trigger)
+    TwoPass(WaveIn, WaveInPos, WaveOut, WaveOutPos, size, 1);
 }
 
 static void TwoPass(FILE *WaveIn, int WaveInPos, FILE *WaveOut, int WaveOutPos, int size, int pass)
 {
-    int i, rsize, maxsize = size;
+  int i, rsize, maxsize = size;
 
-    fseek(WaveIn, WaveInPos, SEEK_SET);
+  fseek(WaveIn, WaveInPos, SEEK_SET);
+
+  if (pass)
+    fseek(WaveOut, WaveOutPos, SEEK_SET);
+
+  timing.op = timeGetTime();
+
+  while (size > 0)
+  {
+    float percent;
+
+    rsize = (size >= NORM_SIZE ? NORM_SIZE : size);
+
+    fread(Norm_Buffer, rsize, 1, WaveIn);
 
     if (pass)
-        fseek(WaveOut, WaveOutPos, SEEK_SET);
-
-    timing.op = timeGetTime();
-
-    while (size > 0)
     {
-        float percent;
+      for (i = 0; i < (rsize >> 1); i++)
+        Norm_Buffer[i] = Norm_Table[Norm_Buffer[i] + 32768];
 
-        rsize = (size >= NORM_SIZE ? NORM_SIZE : size);
-
-        fread(Norm_Buffer, rsize, 1, WaveIn);
-
-        if (pass)
-        {
-            for (i=0; i<(rsize>>1); i++)
-                Norm_Buffer[i] = Norm_Table[Norm_Buffer[i]+32768];
-
-            fwrite(Norm_Buffer, rsize, 1, WaveOut);
-        }
-        else
-            for (i=0; i<(rsize>>1); i++)
-                if (Sound_Max < abs(Norm_Buffer[i]))
-                    Sound_Max = abs(Norm_Buffer[i]);
-
-        size -= rsize;
-
-        timing.ed = timeGetTime();
-        elapsed = (timing.ed-timing.op)/1000;
-        percent = (float)(100.0*(maxsize-size)/maxsize);
-        remain = (int)((timing.ed-timing.op)*(100.0-percent)/percent)/1000;
-
-        if (Info_Flag)
-        {
-            sprintf(szBuffer, "%d:%02d:%02d", elapsed/3600, (elapsed%3600)/60, elapsed%60);
-            SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
-
-            sprintf(szBuffer, "%d:%02d:%02d", remain/3600, (remain%3600)/60, remain%60);
-            SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
-        }
-
-        InvalidateRect(hwndSelect, NULL, TRUE);
-        SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (int)(percent*TRACK_PITCH/100));
+      fwrite(Norm_Buffer, rsize, 1, WaveOut);
     }
+    else
+      for (i = 0; i < (rsize >> 1); i++)
+        if (Sound_Max < abs(Norm_Buffer[i]))
+          Sound_Max = abs(Norm_Buffer[i]);
+
+    size -= rsize;
+
+    timing.ed = timeGetTime();
+    elapsed = (timing.ed - timing.op) / 1000;
+    percent = (float)(100.0*(maxsize - size) / maxsize);
+    remain = (int)((timing.ed - timing.op)*(100.0 - percent) / percent) / 1000;
+
+    if (Info_Flag)
+    {
+      sprintf(szBuffer, "%d:%02d:%02d", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60);
+      SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
+
+      sprintf(szBuffer, "%d:%02d:%02d", remain / 3600, (remain % 3600) / 60, remain % 60);
+      SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
+    }
+
+    InvalidateRect(hwndSelect, NULL, TRUE);
+    SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (int)(percent*TRACK_PITCH / 100));
+  }
 }
