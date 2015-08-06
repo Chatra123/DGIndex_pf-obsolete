@@ -23,105 +23,104 @@
 
 static sint_16 EXPT[125][3];
 
-static void exp_unpack_ch(uint_16 type,uint_16 expstr,uint_16 ngrps,uint_16 initial_exp, uint_16 exps[], uint_16 *dest);
+static void exp_unpack_ch(uint_16 type, uint_16 expstr, uint_16 ngrps, uint_16 initial_exp, uint_16 exps[], uint_16 *dest);
 
 void exponent_init()
 {
-    int i;
+  int i;
 
-    for (i=0; i<125; i++)
-    {
-        EXPT[i][0] = i / 25;
-        EXPT[i][1] = (i - EXPT[i][0] * 25) / 5;
-        EXPT[i][2] = i - EXPT[i][0] * 25 - EXPT[i][1] * 5;
-        EXPT[i][0] -= 2;
-        EXPT[i][1] -= 2;
-        EXPT[i][2] -= 2;
-    }
+  for (i = 0; i < 125; i++)
+  {
+    EXPT[i][0] = i / 25;
+    EXPT[i][1] = (i - EXPT[i][0] * 25) / 5;
+    EXPT[i][2] = i - EXPT[i][0] * 25 - EXPT[i][1] * 5;
+    EXPT[i][0] -= 2;
+    EXPT[i][1] -= 2;
+    EXPT[i][2] -= 2;
+  }
 }
 
-void exponent_unpack( bsi_t *bsi, audblk_t *audblk)
+void exponent_unpack(bsi_t *bsi, audblk_t *audblk)
 {
-    uint_16 i;
+  uint_16 i;
 
-    for(i=0; i< bsi->nfchans; i++)
-        exp_unpack_ch(UNPACK_FBW, audblk->chexpstr[i], audblk->nchgrps[i], audblk->exps[i][0],
-                &audblk->exps[i][1], audblk->fbw_exp[i]);
+  for (i = 0; i < bsi->nfchans; i++)
+    exp_unpack_ch(UNPACK_FBW, audblk->chexpstr[i], audblk->nchgrps[i], audblk->exps[i][0],
+    &audblk->exps[i][1], audblk->fbw_exp[i]);
 
-    if(audblk->cplinu)
-        exp_unpack_ch(UNPACK_CPL, audblk->cplexpstr, audblk->ncplgrps, audblk->cplabsexp << 1,
-                audblk->cplexps, &audblk->cpl_exp[audblk->cplstrtmant]);
+  if (audblk->cplinu)
+    exp_unpack_ch(UNPACK_CPL, audblk->cplexpstr, audblk->ncplgrps, audblk->cplabsexp << 1,
+    audblk->cplexps, &audblk->cpl_exp[audblk->cplstrtmant]);
 
-    if(bsi->lfeon)
-        exp_unpack_ch(UNPACK_LFE, audblk->lfeexpstr, 2, audblk->lfeexps[0],
-                &audblk->lfeexps[1], audblk->lfe_exp);
+  if (bsi->lfeon)
+    exp_unpack_ch(UNPACK_LFE, audblk->lfeexpstr, 2, audblk->lfeexps[0],
+    &audblk->lfeexps[1], audblk->lfe_exp);
 }
 
-
-static void exp_unpack_ch(uint_16 type,uint_16 expstr,uint_16 ngrps,uint_16 initial_exp,
-        uint_16 exps[], uint_16 *dest)
+static void exp_unpack_ch(uint_16 type, uint_16 expstr, uint_16 ngrps, uint_16 initial_exp,
+  uint_16 exps[], uint_16 *dest)
 {
-    uint_16 i,j;
-    sint_16 exp_acc;
+  uint_16 i, j;
+  sint_16 exp_acc;
 
-    if(expstr == EXP_REUSE)
-        return;
+  if (expstr == EXP_REUSE)
+    return;
 
-    /* Handle the initial absolute exponent */
-    exp_acc = initial_exp;
-    j = 0;
+  /* Handle the initial absolute exponent */
+  exp_acc = initial_exp;
+  j = 0;
 
-    /* In the case of a fbw channel then the initial absolute values is
-     * also an exponent */
-    if(type != UNPACK_CPL)
-        dest[j++] = exp_acc;
+  /* In the case of a fbw channel then the initial absolute values is
+   * also an exponent */
+  if (type != UNPACK_CPL)
+    dest[j++] = exp_acc;
 
-    /* Loop through the groups and fill the dest array appropriately */
-    for(i=0; i<ngrps; i++)
+  /* Loop through the groups and fill the dest array appropriately */
+  for (i = 0; i < ngrps; i++)
+  {
+    if (exps[i] > 124)
     {
-        if (exps[i] > 124)
-        {
-            error_flag = 1;
-            return;
-        }
-
-        exp_acc += EXPT[exps[i]][0];
-
-        switch (expstr)
-        {
-            case EXP_D45:
-                dest[j++] = exp_acc;
-                dest[j++] = exp_acc;
-            case EXP_D25:
-                dest[j++] = exp_acc;
-            case EXP_D15:
-                dest[j++] = exp_acc;
-        }
-
-        exp_acc += EXPT[exps[i]][1];
-
-        switch (expstr)
-        {
-            case EXP_D45:
-                dest[j++] = exp_acc;
-                dest[j++] = exp_acc;
-            case EXP_D25:
-                dest[j++] = exp_acc;
-            case EXP_D15:
-                dest[j++] = exp_acc;
-        }
-
-        exp_acc += EXPT[exps[i]][2];
-
-        switch (expstr)
-        {
-            case EXP_D45:
-                dest[j++] = exp_acc;
-                dest[j++] = exp_acc;
-            case EXP_D25:
-                dest[j++] = exp_acc;
-            case EXP_D15:
-                dest[j++] = exp_acc;
-        }
+      error_flag = 1;
+      return;
     }
+
+    exp_acc += EXPT[exps[i]][0];
+
+    switch (expstr)
+    {
+    case EXP_D45:
+      dest[j++] = exp_acc;
+      dest[j++] = exp_acc;
+    case EXP_D25:
+      dest[j++] = exp_acc;
+    case EXP_D15:
+      dest[j++] = exp_acc;
+    }
+
+    exp_acc += EXPT[exps[i]][1];
+
+    switch (expstr)
+    {
+    case EXP_D45:
+      dest[j++] = exp_acc;
+      dest[j++] = exp_acc;
+    case EXP_D25:
+      dest[j++] = exp_acc;
+    case EXP_D15:
+      dest[j++] = exp_acc;
+    }
+
+    exp_acc += EXPT[exps[i]][2];
+
+    switch (expstr)
+    {
+    case EXP_D45:
+      dest[j++] = exp_acc;
+      dest[j++] = exp_acc;
+    case EXP_D25:
+      dest[j++] = exp_acc;
+    case EXP_D15:
+      dest[j++] = exp_acc;
+    }
+  }
 }

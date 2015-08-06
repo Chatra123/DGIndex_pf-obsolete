@@ -25,19 +25,19 @@
 
 struct ts_t
 {
-    ui64 idct;
-    ui64 conv;
-    ui64 mcpy;
-    ui64 post;
-    ui64 dec;
-    ui64 bit;
-    ui64 decMB;
-    ui64 mcmp;
-    ui64 addb;
-    ui64 overall;
-    ui64 sum;
-    int div;
-    ui64 freq;
+  ui64 idct;
+  ui64 conv;
+  ui64 mcpy;
+  ui64 post;
+  ui64 dec;
+  ui64 bit;
+  ui64 decMB;
+  ui64 mcmp;
+  ui64 addb;
+  ui64 overall;
+  ui64 sum;
+  int div;
+  ui64 freq;
 };
 
 typedef struct ts_t ts;

@@ -34,44 +34,44 @@
 class PATParser
 {
 private:
-    enum operation {Dump=1, AudioType, InitialPids} op;
-    HWND hDialog;
-    char *filename;
-    unsigned int audio_pid;
-    unsigned int audio_type;
-    FILE *fin;
-    unsigned int num_pmt_pids, num_programs;
-    bool first_pat, first_pmt;
-    unsigned int pmt_pids[MAX_PIDS];
-    unsigned int programs[MAX_PROGRAMS];
-    unsigned char section[MAX_SECTION];
-    unsigned char *section_ptr;
-    unsigned char buffer[204];
+  enum operation { Dump = 1, AudioType, InitialPids } op;
+  HWND hDialog;
+  char *filename;
+  unsigned int audio_pid;
+  unsigned int audio_type;
+  FILE *fin;
+  unsigned int num_pmt_pids, num_programs;
+  bool first_pat, first_pmt;
+  unsigned int pmt_pids[MAX_PIDS];
+  unsigned int programs[MAX_PROGRAMS];
+  unsigned char section[MAX_SECTION];
+  unsigned char *section_ptr;
+  unsigned char buffer[204];
 private:
-    int SyncTransport(void);
-    void PATParser::GetTable(unsigned int table_pid);
-    int AnalyzePAT(void);
-    int AnalyzePSIP(void);
-    int AnalyzeRaw(void);
-    int ProcessPATSection(void);
-    int ProcessPMTSection(void);
-    int ProcessPSIPSection(void);
-    __int64 GetPCRValue( void );
+  int SyncTransport(void);
+  void PATParser::GetTable(unsigned int table_pid);
+  int AnalyzePAT(void);
+  int AnalyzePSIP(void);
+  int AnalyzeRaw(void);
+  int ProcessPATSection(void);
+  int ProcessPMTSection(void);
+  int ProcessPSIPSection(void);
+  __int64 GetPCRValue(void);
 public:
-    PATParser(void);
-    int DumpPAT(HWND hDialog, char *filename);
-    int DumpPSIP(HWND hDialog, char *filename);
-    int DumpRaw(HWND hDialog, char *filename);
-    int GetAudioType(char *filename, unsigned int audio_pid);
-    int DoInitialPids(char *filename);
+  PATParser(void);
+  int DumpPAT(HWND hDialog, char *filename);
+  int DumpPSIP(HWND hDialog, char *filename);
+  int DumpRaw(HWND hDialog, char *filename);
+  int GetAudioType(char *filename, unsigned int audio_pid);
+  int DoInitialPids(char *filename);
 private:
-    int check_pmt_selction_length;
-    unsigned char *check_section_ptr;
+  int check_pmt_selction_length;
+  unsigned char *check_section_ptr;
 public:
-    unsigned int GetNumPMTpids( void );
-    void InitializePMTCheckItems(void);
-    int CheckPMTPid( int pkt_pid, int check_pmt_idx );
-    int CheckPMTSection( int pkt_pid, unsigned char *pkt_ptr, unsigned int pkt_length, int check_pmt_idx );
+  unsigned int GetNumPMTpids(void);
+  void InitializePMTCheckItems(void);
+  int CheckPMTPid(int pkt_pid, int check_pmt_idx);
+  int CheckPMTSection(int pkt_pid, unsigned char *pkt_ptr, unsigned int pkt_length, int check_pmt_idx);
 private:
-    int ParsePMTSection( void );
+  int ParsePMTSection(void);
 };

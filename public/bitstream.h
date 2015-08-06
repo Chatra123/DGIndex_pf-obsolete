@@ -24,14 +24,14 @@ uint_32 bitstream_get_bh(uint_32 num_bits);
 
 __forceinline static uint_32 bitstream_get(uint_32 num_bits)
 {
-    uint_32 result;
+  uint_32 result;
 
-    if (num_bits < bits_left)
-    {
-        result = (current_word << (32 - bits_left)) >> (32 - num_bits);
-        bits_left -= num_bits;
-        return result;
-    }
+  if (num_bits < bits_left)
+  {
+    result = (current_word << (32 - bits_left)) >> (32 - num_bits);
+    bits_left -= num_bits;
+    return result;
+  }
 
-    return bitstream_get_bh(num_bits);
+  return bitstream_get_bh(num_bits);
 }

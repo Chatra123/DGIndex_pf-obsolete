@@ -44,164 +44,164 @@ static sint_32 buffer_size;
 
 uint_32 decode_buffer_syncframe(syncinfo_t *syncinfo, uint_8 **start, uint_8 *end)
 {
-    uint_8 *cur = *start;
-    uint_16 syncword = syncinfo->syncword;
-    uint_32 ret = 0;
+  uint_8 *cur = *start;
+  uint_16 syncword = syncinfo->syncword;
+  uint_32 ret = 0;
 
-    // find an ac3 sync frame
+  // find an ac3 sync frame
 resync:
-    while(syncword != 0x0b77)
-    {
-        if(cur >= end)
-            goto done;
-        syncword = (syncword << 8) + *cur++;
-    }
+  while (syncword != 0x0b77)
+  {
+    if (cur >= end)
+      goto done;
+    syncword = (syncword << 8) + *cur++;
+  }
 
-    // need the next 3 bytes to decide how big the frame is
-    while(buffer_size < 3)
-    {
-        if(cur >= end)
-            goto done;
+  // need the next 3 bytes to decide how big the frame is
+  while (buffer_size < 3)
+  {
+    if (cur >= end)
+      goto done;
 
-        buffer[buffer_size++] = *cur++;
-    }
+    buffer[buffer_size++] = *cur++;
+  }
 
-    parse_syncinfo(syncinfo, buffer);
+  parse_syncinfo(syncinfo, buffer);
 
-    if (syncinfo->frame_size==0)        // CRITICAL CONDITION
-        goto done;
+  if (syncinfo->frame_size == 0)        // CRITICAL CONDITION
+    goto done;
 
-    while (buffer_size < (syncinfo->frame_size<<1) - 2)
-    {
-        if(cur >= end)
-            goto done;
+  while (buffer_size < (syncinfo->frame_size << 1) - 2)
+  {
+    if (cur >= end)
+      goto done;
 
-        buffer[buffer_size++] = *cur++;
-    }
+    buffer[buffer_size++] = *cur++;
+  }
 
-    // check the crc over the entire frame
-    if (crc_process_frame(buffer, (syncinfo->frame_size<<1) - 2))
-    {
-        SetDlgItemText(hDlg, IDC_INFO, "audio error");
+  // check the crc over the entire frame
+  if (crc_process_frame(buffer, (syncinfo->frame_size << 1) - 2))
+  {
+    SetDlgItemText(hDlg, IDC_INFO, "audio error");
 
-        syncword = 0xffff;
-        buffer_size = 0;
-        goto resync;
-    }
-
-    // if we got to this point, we found a valid ac3 frame to decode
-    bitstream_init(buffer);
-    // get rid of the syncinfo struct as we already parsed it
-    bitstream_get(24);
-
-    // reset the syncword for next time
     syncword = 0xffff;
     buffer_size = 0;
-    ret = 1;
+    goto resync;
+  }
+
+  // if we got to this point, we found a valid ac3 frame to decode
+  bitstream_init(buffer);
+  // get rid of the syncinfo struct as we already parsed it
+  bitstream_get(24);
+
+  // reset the syncword for next time
+  syncword = 0xffff;
+  buffer_size = 0;
+  ret = 1;
 
 done:
-    syncinfo->syncword = syncword;
-    *start = cur;
-    return ret;
+  syncinfo->syncword = syncword;
+  *start = cur;
+  return ret;
 }
 
 uint_32 ac3_decode_data(uint_8 *data_start, uint_32 length, uint_32 start)
 {
-    uint_8 *data_end = data_start + length;
-    uint_32 i, j = start;
+  uint_8 *data_end = data_start + length;
+  uint_32 i, j = start;
 
-    while (decode_buffer_syncframe(&syncinfo, &data_start, data_end))
+  while (decode_buffer_syncframe(&syncinfo, &data_start, data_end))
+  {
+    if (error_flag)
     {
-        if (error_flag)
-        {
-            SetDlgItemText(hDlg, IDC_INFO, "audio error");
-            ZeroMemory(s16_samples, sizeof(sint_16) * 256 * 2 * 6);
-            error_flag = 0;
-            continue;
-        }
-
-        parse_bsi(&bsi);
-
-        for (i=0; i<6; i++)
-        {
-            ZeroMemory(samples, sizeof(double) * 256 * (bsi.nfchans + bsi.lfeon));
-
-            parse_audblk(&bsi, &audblk);
-
-            exponent_unpack(&bsi, &audblk);
-            if (error_flag)
-                goto error;
-
-            bit_allocate(syncinfo.fscod, &bsi, &audblk);
-
-            coeff_unpack(&bsi, &audblk, samples);
-            if (error_flag)
-                goto error;
-
-            if (bsi.acmod == 0x2)
-                rematrix(&audblk, samples);
-
-            imdct(&bsi, &audblk, samples);
-
-            downmix(&audblk, &bsi, samples, &s16_samples[i * 512]);
-
-            sanity_check(&bsi, &audblk);
-            if (error_flag)
-                goto error;
-        }
-
-        memcpy(&AC3Dec_Buffer[start], s16_samples, 6144);
-        start += 6144;
-error:
-        ;
+      SetDlgItemText(hDlg, IDC_INFO, "audio error");
+      ZeroMemory(s16_samples, sizeof(sint_16) * 256 * 2 * 6);
+      error_flag = 0;
+      continue;
     }
 
-    if (Decision_Flag || (!SRC_Flag && Norm_Flag))
-        for (i=(j>>1); i<(start>>1); i++)
-            if (Sound_Max < abs(ptrAC3Dec_Buffer[i]))
-            {
-                Sound_Max = abs(ptrAC3Dec_Buffer[i]);
+    parse_bsi(&bsi);
 
-                if (Decision_Flag && Sound_Max > Norm_Ratio)
-                {
-                    sprintf(szBuffer, "%.2f", 327.68 * Norm_Ratio / Sound_Max);
-                    SetDlgItemText(hDlg, IDC_INFO, szBuffer);
-                }
-            }
+    for (i = 0; i < 6; i++)
+    {
+      ZeroMemory(samples, sizeof(double) * 256 * (bsi.nfchans + bsi.lfeon));
 
-    return start;
+      parse_audblk(&bsi, &audblk);
+
+      exponent_unpack(&bsi, &audblk);
+      if (error_flag)
+        goto error;
+
+      bit_allocate(syncinfo.fscod, &bsi, &audblk);
+
+      coeff_unpack(&bsi, &audblk, samples);
+      if (error_flag)
+        goto error;
+
+      if (bsi.acmod == 0x2)
+        rematrix(&audblk, samples);
+
+      imdct(&bsi, &audblk, samples);
+
+      downmix(&audblk, &bsi, samples, &s16_samples[i * 512]);
+
+      sanity_check(&bsi, &audblk);
+      if (error_flag)
+        goto error;
+    }
+
+    memcpy(&AC3Dec_Buffer[start], s16_samples, 6144);
+    start += 6144;
+  error:
+    ;
+  }
+
+  if (Decision_Flag || (!SRC_Flag && Norm_Flag))
+    for (i = (j >> 1); i < (start >> 1); i++)
+      if (Sound_Max < abs(ptrAC3Dec_Buffer[i]))
+      {
+        Sound_Max = abs(ptrAC3Dec_Buffer[i]);
+
+        if (Decision_Flag && Sound_Max > Norm_Ratio)
+        {
+          sprintf(szBuffer, "%.2f", 327.68 * Norm_Ratio / Sound_Max);
+          SetDlgItemText(hDlg, IDC_INFO, szBuffer);
+        }
+      }
+
+  return start;
 }
 
 void InitialAC3()
 {
-    int i, count;
+  int i, count;
 
-    if (AudioOnly_Flag)
-    {
-        MessageBox(hWnd, "The \'Demux Audio Only\' feature is intended for demuxing, not decoding.\nDeselect \'Decode AC3 Track to WAV\' in Audio/Output Method.", NULL, MB_OK | MB_ICONERROR);
-        ThreadKill(MISC_KILL);
-    }
-    for (i = 0x80, count = 0; i < 0x88; i++)
-    {
-        if (audio[i].selected_for_demux)
-            count++;
-    }
-    if (count > 1)
-    {
-        MessageBox(hWnd, "Cannot decode multiple AC3 streams at the same time.\nMake sure only one track is selected.", NULL, MB_OK | MB_ICONERROR);
-        ThreadKill(MISC_KILL);
-    }
+  if (AudioOnly_Flag)
+  {
+    MessageBox(hWnd, "The \'Demux Audio Only\' feature is intended for demuxing, not decoding.\nDeselect \'Decode AC3 Track to WAV\' in Audio/Output Method.", NULL, MB_OK | MB_ICONERROR);
+    ThreadKill(MISC_KILL);
+  }
+  for (i = 0x80, count = 0; i < 0x88; i++)
+  {
+    if (audio[i].selected_for_demux)
+      count++;
+  }
+  if (count > 1)
+  {
+    MessageBox(hWnd, "Cannot decode multiple AC3 streams at the same time.\nMake sure only one track is selected.", NULL, MB_OK | MB_ICONERROR);
+    ThreadKill(MISC_KILL);
+  }
 
-    error_flag = buffer_size = 0;
+  error_flag = buffer_size = 0;
 
-    ZeroMemory(&syncinfo, sizeof(syncinfo));
-    ZeroMemory(&bsi, sizeof(bsi));
-    ZeroMemory(&audblk, sizeof(audblk));
+  ZeroMemory(&syncinfo, sizeof(syncinfo));
+  ZeroMemory(&bsi, sizeof(bsi));
+  ZeroMemory(&audblk, sizeof(audblk));
 
-    drc_init();
-    imdct_init();
-    exponent_init();
-    mantissa_init();
+  drc_init();
+  imdct_init();
+  exponent_init();
+  mantissa_init();
 
-    srand(0);
+  srand(0);
 }
