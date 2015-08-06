@@ -1,29 +1,29 @@
 /* Copyright (C) 1996, MPEG Software Simulation Group. All Rights Reserved. */
 
 /*
- * Disclaimer of Warranty
- *
- * These software programs are available to the user without any license fee or
- * royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
- * any and all warranties, whether express, implied, or statuary, including any
- * implied warranties or merchantability or of fitness for a particular
- * purpose.  In no event shall the copyright-holder be liable for any
- * incidental, punitive, or consequential damages of any kind whatsoever
- * arising from the use of these programs.
- *
- * This disclaimer of warranty extends to the user of these programs and user's
- * customers, employees, agents, transferees, successors, and assigns.
- *
- * The MPEG Software Simulation Group does not represent or warrant that the
- * programs furnished hereunder are free of infringement of any third-party
- * patents.
- *
- * Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
- * are subject to royalty fees to patent holders.  Many of these patents are
- * general enough such that they are unavoidable regardless of implementation
- * design.
- *
- */
+* Disclaimer of Warranty
+*
+* These software programs are available to the user without any license fee or
+* royalty on an "as is" basis.  The MPEG Software Simulation Group disclaims
+* any and all warranties, whether express, implied, or statuary, including any
+* implied warranties or merchantability or of fitness for a particular
+* purpose.  In no event shall the copyright-holder be liable for any
+* incidental, punitive, or consequential damages of any kind whatsoever
+* arising from the use of these programs.
+*
+* This disclaimer of warranty extends to the user of these programs and user's
+* customers, employees, agents, transferees, successors, and assigns.
+*
+* The MPEG Software Simulation Group does not represent or warrant that the
+* programs furnished hereunder are free of infringement of any third-party
+* patents.
+*
+* Commercial implementations of MPEG-1 and MPEG-2 video, including shareware,
+* are subject to royalty fees to patent holders.  Many of these patents are
+* general enough such that they are unavoidable regardless of implementation
+* design.
+*
+*/
 
 /* SSE2 optimized by Dmitry Rozhdestvensky */
 
@@ -162,14 +162,41 @@ void WriteD2VLine(int finish)
   }
   entries[r++] = ref;
 
+  /*pf_append*/
   for (m = 0; m < gop_entries_ndx; m++)
   {
+    /*
+    ドロップの多いファイルだと8byte以上の値をtempにいれようとしたので
+    事前にチェックする。
+    */
+    int preCheck = (entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+    if (preCheck < 0 || 255 < preCheck) break;
+
     sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
     strcat(D2VLine, temp);
   }
+  /*pf_end_append*/
+
+  /*pf_off*/
+  ////for (m = 0; m < gop_entries_ndx; m++)
+  ////{
+  ////	sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+  ////	strcat(D2VLine, temp);
+  ////}
+
   if (finish) strcat(D2VLine, " ff\n");
   else strcat(D2VLine, "\n");
   fprintf(D2VFile, "%s", D2VLine);
+
+  /*pf_append*/
+  //２秒以上経過していたらファイルにフラッシュ
+  if (2 < time(NULL) - timeFlushD2VFile)
+  {
+    fflush(D2VFile);
+    timeFlushD2VFile = time(NULL);
+  }
+  /*pf_end_append*/
+
   gop_entries_ndx = 0;
 }
 
@@ -340,8 +367,8 @@ static void Update_Picture_Buffers()
         tmp = forward_reference_frame[cc];
 
         /* the previously decoded reference frame is stored coincident with the
-           location where the backward reference frame is stored (backwards
-           prediction is not needed in P pictures) */
+        location where the backward reference frame is stored (backwards
+        prediction is not needed in P pictures) */
         forward_reference_frame[cc] = backward_reference_frame[cc];
 
         /* update pointer for potential future B pictures */
@@ -349,8 +376,8 @@ static void Update_Picture_Buffers()
       }
 
       /* can erase over old backward reference frame since it is not used
-         in a P picture, and since any subsequent B pictures will use the
-         previously decoded I or P frame as the backward_reference_frame */
+      in a P picture, and since any subsequent B pictures will use the
+      previously decoded I or P frame as the backward_reference_frame */
       current_frame[cc] = backward_reference_frame[cc];
     }
 
@@ -411,7 +438,7 @@ static void slice(int MBAmax, unsigned int code)
 
   /* set current location */
   /* NOTE: the arithmetic used to derive macroblock_address below is
-     equivalent to ISO/IEC 13818-2 section 6.3.17: Macroblock */
+  equivalent to ISO/IEC 13818-2 section 6.3.17: Macroblock */
   MBA = ((slice_vert_pos_ext << 7) + (code & 255) - 1) * mb_width + MBAinc - 1;
   MBAinc = 1; // first macroblock in slice: not skipped
 
@@ -504,9 +531,9 @@ static void macroblock_modes(int *pmacroblock_type, int *pmotion_type,
   dmv = (motion_type == MC_DMV); /* dual prime */
 
   /*
-     field mv predictions in frame pictures have to be scaled
-     ISO/IEC 13818-2 section 7.6.3.1 Decoding the motion vectors
-     */
+  field mv predictions in frame pictures have to be scaled
+  ISO/IEC 13818-2 section 7.6.3.1 Decoding the motion vectors
+  */
   mvscale = (mv_format == MV_FIELD && picture_structure == FRAME_PICTURE);
 
   /* get dct_type (frame DCT / field DCT) */
@@ -525,11 +552,11 @@ static void macroblock_modes(int *pmacroblock_type, int *pmotion_type,
 
 /* move/add 8x8-Block from block[comp] to backward_reference_frame */
 /* copy reconstructed 8x8 block from block[comp] to current_frame[]
-   ISO/IEC 13818-2 section 7.6.8: Adding prediction and coefficient data
-   This stage also embodies some of the operations implied by:
-   - ISO/IEC 13818-2 section 7.6.7: Combining predictions
-   - ISO/IEC 13818-2 section 6.1.3: Macroblock
-   */
+ISO/IEC 13818-2 section 7.6.8: Adding prediction and coefficient data
+This stage also embodies some of the operations implied by:
+- ISO/IEC 13818-2 section 7.6.7: Combining predictions
+- ISO/IEC 13818-2 section 6.1.3: Macroblock
+*/
 static void Add_Block(int count, int bx, int by, int dct_type, int addflag)
 {
   static const __int64 mmmask_128 = 0x0080008000800080;
@@ -1674,12 +1701,12 @@ static int Get_macroblock_address_increment()
 }
 
 /*
-   parse VLC and perform dct_diff arithmetic.
-   MPEG-2:  ISO/IEC 13818-2 section 7.2.1
+parse VLC and perform dct_diff arithmetic.
+MPEG-2:  ISO/IEC 13818-2 section 7.2.1
 
-   Note: the arithmetic here is presented more elegantly than
-   the spec, yet the results, dct_diff, are the same.
-   */
+Note: the arithmetic here is presented more elegantly than
+the spec, yet the results, dct_diff, are the same.
+*/
 static int Get_Luma_DC_dct_diff()
 {
   int code, size, dct_diff;
@@ -1762,7 +1789,7 @@ static void form_predictions(int bx, int by, int macroblock_type, int motion_typ
       if (motion_type == MC_FRAME || !(macroblock_type & MACROBLOCK_MOTION_FORWARD))
       {
         /* frame-based prediction (broken into top and bottom halves
-           for spatial scalability prediction purposes) */
+        for spatial scalability prediction purposes) */
         form_prediction(forward_reference_frame, 0, current_frame, 0, Coded_Picture_Width,
           Coded_Picture_Width << 1, 16, 8, bx, by, PMV[0][0][0], PMV[0][0][1], stw);
 

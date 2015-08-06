@@ -1,25 +1,25 @@
 /*
- *  Mutated into DGIndex. Modifications Copyright (C) 2004, Donald Graft
- *
- *  Copyright (C) Chia-chen Kuo - April 2001
- *
- *  This file is part of DVD2AVI, a free MPEG-2 decoder
- *
- *  DVD2AVI is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  DVD2AVI is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *
- */
+*  Mutated into DGIndex. Modifications Copyright (C) 2004, Donald Graft
+*
+*  Copyright (C) Chia-chen Kuo - April 2001
+*
+*  This file is part of DVD2AVI, a free MPEG-2 decoder
+*
+*  DVD2AVI is free software; you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation; either version 2, or (at your option)
+*  any later version.
+*
+*  DVD2AVI is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with GNU Make; see the file COPYING.  If not, write to
+*  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+*
+*/
 
 #include "global.h"
 #include "getbit.h"
@@ -127,7 +127,11 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
 
   case LOCATE_SCROLL:
     CurrentFile = process.startfile;
+
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     Initialize_Buffer();
 
     timing.op = 0;
@@ -164,7 +168,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     }
     // Position to start of the first file.
     CurrentFile = 0;
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[0], 0, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     Initialize_Buffer();
     while (1)
     {
@@ -175,7 +182,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
       }
     }
   }
-
   // Check validity of the input file and collect some needed information.
   if (!Check_Flag)
   {
@@ -189,25 +195,34 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // Skip any leading null characters, because some
     // captured transport files were seen to start with a large
     // number of nulls.
-
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[0], 0, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     for (;;)
     {
       if (_read(Infile[0], buf, 1) == 0)
       {
+        if (Mode_NoDialoge == false)/*pf_append*/
+          MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
+
         // EOF
-        MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
+        //MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
         return 0;
       }
       if (buf[0] != 0)
       {
         // Unread the non-null byte and exit.
+        Validate_fpos();                                        /*pf_append*/
         _lseeki64(Infile[0], _lseeki64(Infile[0], 0, SEEK_CUR) - 1, SEEK_SET);
+        fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
         break;
       }
     }
 
     Read = _read(Infile[0], buf, 2048);
+
     TransportPacketSize = 188;
   try_again:
     b = buf;
@@ -250,7 +265,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     if (SystemStream_Flag != TRANSPORT_STREAM)
     {
       CurrentFile = 0;
+      Validate_fpos();                                        /*pf_append*/
       _lseeki64(Infile[0], 0, SEEK_SET);
+      fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
       Initialize_Buffer();
 
       for (i = 0; i < 1024; i++)
@@ -269,15 +287,24 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // If the file does not contain a sequence header start code, it can't be an MPEG file.
     // We're already byte aligned at the start of the file.
     CurrentFile = 0;
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[0], 0, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     Initialize_Buffer();
     count = 0;
     while ((show = Show_Bits(32)) != 0x1b3)
     {
       if (Stop_Flag || count > 10000000)
       {
+        /*pf_append*/
+        //ÉXÉNÉâÉìÉuÉãÇ™âèúÇ≈Ç´ÇƒÇ¢Ç»Ç¢ìô
         // We didn't find a sequence header.
-        MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
+        if (Mode_NoDialoge == false)/*pf_append*/
+          MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
+
+        // We didn't find a sequence header.
+        //MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
         ThreadKill(MISC_KILL);
       }
       Flush_Buffer(8);
@@ -301,7 +328,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     }
 
     CurrentFile = 0;
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[0], 0, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     Initialize_Buffer();
 
     // We know the stream type now, so our parsing is immune to
@@ -337,7 +367,12 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     while (i)
     {
       if (FullPathInFiles)
-        fprintf(D2VFile, "%s\n", Infilename[NumLoadedFiles - i]);
+      {
+        if (Mode_Stdin == false)
+          fprintf(D2VFile, "%s\n", Infilename[NumLoadedFiles - i]);
+        else
+          fprintf(D2VFile, "%s\n", Stdin_SourcePath);
+      }
       else
       {
         char path[DG_MAX_PATH];
@@ -411,7 +446,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     savefile = process.startfile;
     saveloc = process.startloc;
     CurrentFile = process.startfile;
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
     // We initialize the following variables to the current start position, because if the user
     // has set a range, and the packs are large such that we won't hit a pack/packet start
     // before we hit an I frame, we don't want the pack/packet position to remain at 0.
@@ -453,7 +491,11 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
   }
   PTSAdjustDone = 0;
   CurrentFile = process.startfile;
+
+  Validate_fpos();                                        /*pf_append*/
   _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
+  fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+
   // We initialize the following variables to the current start position, because if the user
   // has set a range, and the packs are large such that we won't hit a pack/packet start
   // before we hit an I frame, we don't want the pack/packet position to remain at 0.
@@ -498,6 +540,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
       ThreadKill(MISC_KILL);
     }
   }
+
   return 0;
 }
 
@@ -527,7 +570,10 @@ static BOOL GOPBack()
       return false;
     }
 
+    Validate_fpos();                                        /*pf_append*/
     _lseeki64(Infile[process.startfile], process.startloc, SEEK_SET);
+    fpos_tracker = _telli64(Infile[process.startfile]);     /*pf_append*/
+
     Initialize_Buffer();
 
     for (;;)

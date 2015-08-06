@@ -3,6 +3,9 @@
 #include "Shlwapi.h"
 #include "global.h"
 
+#include <sys\types.h>
+#include <sys\stat.h>
+
 int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 {
   char cwd[DG_MAX_PATH];
@@ -25,6 +28,13 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
     CLIPreview = 0;
     ExitOnEnd = 0;
     hadRGoption = 0;
+
+    /*pf_append*/
+    Mode_Stdin = false;
+    StdinTmpFileSize_byArg = 5;
+    ReadSpeedLimit_byArg = 0;
+    Mode_NoDialoge = false;
+    Mode_UseBad = false;
 
     while (1)
     {
@@ -65,7 +75,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           }
           *f = 0;
           /* If the specified file does not include a path, use the
-             current directory. */
+          current directory. */
           if (name[0] != '\\' && name[1] != ':')
           {
             GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -87,6 +97,121 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           Recovery();
           RefreshWindow(true);
         }
+
+        //==========================================================================
+        /*  pf_append  */
+        if (!strncmp(opt, "pipe", 4))
+        {
+          Mode_Stdin = true;
+          while (*p == ' ' || *p == '\t') p++;   //文字が見つかるまで空白スキップ
+          f = name;
+
+          while (1)
+          {
+            //　　　　"の外　　＆　　空白or終端なら終了
+            if ((in_quote == 0) && (*p == ' ' || *p == '\t' || *p == 0))
+              break;
+
+            //　　　　"の外　　＆　　パラメータ開始文字なら終了
+            if ((in_quote == 0) && (*p == '-' || *p == '/'))
+              break;
+
+            //　　　　"の内　　＆　　終端なら終了
+            if ((in_quote == 1) && (*p == 0))
+              break;
+
+            //　 "の内外の設定
+            if (*p == '"')
+            {
+              //　"の外？
+              if (in_quote == 0)
+              {
+                in_quote = 1;          //　"の内に設定
+                p++;
+              }
+              else
+              {
+                in_quote = 0;          //　"の外に設定
+                p++;
+                break;
+              }
+            }
+
+            // fに引数の１文字 pを割り当て、進める
+            *f++ = *p++;
+          }
+          *f = 0;
+
+          strcpy(Stdin_SourcePath, name);
+          Recovery();
+          RefreshWindow(true);
+
+          //Recovery()内で Infilelength[i]を取得している。
+          //Stdin_SourcePathのファイルサイズが確定していないので上手く処理できない。
+          //Recovery()の後でNumLoadedFiles++
+          NumLoadedFiles++;
+        }
+        else if (!strncmp(opt, "usebad", 6))
+        {
+          Mode_UseBad = true;
+        }
+        else if (!strncmp(opt, "nodialog", 8))
+        {
+          Mode_NoDialoge = true;
+        }
+        else if (!strncmp(opt, "tmpbuff", 7))
+        {
+          //StdinTmpFileSize_byArg
+          char *param, paramText[32];
+          memset(paramText, '\0', 32);
+          param = paramText;
+
+          while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
+
+          while (1)
+          {
+            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端なら終了
+              break;
+            if (*p == '-' || *p == '/')                    //パラメータ開始文字なら終了
+              break;
+
+            *param++ = *p++;                               //*paramに引数を１文字割り当て、進める
+          }
+
+          double buffsize;
+
+          if (sscanf_s(paramText, "%lf", &buffsize) <= 0)
+            buffsize = 0;
+          StdinTmpFileSize_byArg = buffsize;
+        }
+        else if (!strncmp(opt, "limit", 5))
+        {
+          //ファイル速度上限
+
+          char *param, paramText[32];
+          memset(paramText, '\0', 32);
+          param = paramText;
+
+          while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
+          while (1)
+          {
+            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端なら終了
+              break;
+            if (*p == '-' || *p == '/')                    //パラメータ開始文字なら終了
+              break;
+
+            *param++ = *p++;                               //*paramに引数を１文字割り当て、進める
+          }
+
+          double limit_MiB;
+
+          if (sscanf_s(paramText, "%lf", &limit_MiB) <= 0)
+            limit_MiB = 0;
+          ReadSpeedLimit_byArg = limit_MiB * 1024 * 1024;
+        }
+        /*pf_end_append*/
+        //==========================================================================
+
         if (!strncmp(opt, "ai", 3))
         {
           while (*p == ' ' || *p == '\t') p++;
@@ -117,7 +242,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           for (;;)
           {
             /* If the specified file does not include a path, use the
-               current directory. */
+            current directory. */
             if (name[0] != '\\' && name[1] != ':')
             {
               GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -491,7 +616,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
             }
             *f = 0;
             /* If the specified file does not include a path, use the
-               current directory. */
+            current directory. */
             if (name[0] != '\\' && name[1] != ':')
             {
               GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -558,7 +683,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           }
           *f = 0;
           /* If the specified file does not include a path, use the
-             current directory. */
+          current directory. */
           if (name[0] != '\\' && name[1] != ':')
           {
             GetCurrentDirectory(sizeof(szOutput) - 1, szOutput);
@@ -619,7 +744,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           }
           *f = 0;
           /* If the specified file does not include a path, use the
-             current directory. */
+          current directory. */
           if (name[0] != '\\' && name[1] != ':')
           {
             GetCurrentDirectory(sizeof(szInput) - 1, szInput);
@@ -652,6 +777,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
       MessageBox(hWnd, "No output file in HIDE mode! Exiting.", NULL, MB_OK | MB_ICONERROR);
       return -1;
     }
+
     CheckFlag();
   }
 
@@ -689,7 +815,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
       for (;;)
       {
         /* If the specified file does not include a path, use the
-           current directory. */
+        current directory. */
         if (!strstr(aFName, "\\"))
         {
           GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -751,7 +877,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
         }
 
         /* If the specified file does not include a path, use the
-           current directory. */
+        current directory. */
         if (!strstr(aFName, "\\"))
         {
           GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -783,7 +909,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
       strcpy(aFName, ptr);
       *ende = save;
       /* If the specified batch file does not include a path, use the
-         current directory. */
+      current directory. */
       if (!strstr(aFName, "\\"))
       {
         GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -802,7 +928,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           // Zap the newline.
           line[strlen(line) - 1] = 0;
           /* If the specified batch file does not include a path, use the
-             current directory. */
+          current directory. */
           if (!strstr(line, "\\"))
           {
             GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -1190,7 +1316,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
         strcpy(aFName, ptr);
         *ende = save;
         /* If the specified template file does not include a path, use the
-           current directory. */
+        current directory. */
         if (!strstr(aFName, "\\"))
         {
           GetCurrentDirectory(sizeof(cwd) - 1, cwd);
@@ -1275,5 +1401,131 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
       return -1;
     }
   }
+
+  //*pf_append*/
+  //initialize
+  IsClosed_stdin = true;
+  HasExtraData_fromStdin = false;
+  Flg_Exist_morebuffLog = false;
+
+  if (Mode_Stdin && Initialize_stdin() == 1)
+  {
+    //エラー
+    remove(StdinTmpFile_Path);
+    return 1;                            //プロセス終了
+  }
+
+  timeFlushD2VFile = time(NULL);
+  tickFileReadSize = 0;
+  tickFileRead_begin = system_clock::now();
+  /*pf_end_append*/
+
   return 0;
 }
+
+//==========================================================================
+//*pf_append*/
+int Initialize_stdin()
+{
+  // -i "filepath"　-pipe 　同時に指定されたらプロセス終了。
+  if (NumLoadedFiles != 1) return 1;
+  NumLoadedFiles = 0;
+
+  //
+  //Input
+  //
+  //  ver. file descriptor    read stdin
+  _setmode(_fileno(stdin), _O_BINARY);
+  fdStdin = _fileno(stdin);
+
+  //  ver. file pointer       read stdin
+  //fpStdin = stdin;
+  //_setmode(_fileno(stdin), _O_BINARY);
+
+  //StdinTmpFile
+  //size
+  double buffsize_MB = StdinTmpFileSize_byArg;
+  buffsize_MB = (10 < buffsize_MB) ? buffsize_MB : 10;     //greater than 10 MiB
+  StdinTmpFile_Size = (int)(buffsize_MB * 1024 * 1024);
+
+  //buff
+  char *tmpFileBuff = new char[StdinTmpFile_Size];         //一時ファイル作成用のバッファ
+  memset(tmpFileBuff, '\0', StdinTmpFile_Size);
+
+  //
+  //Fill tmpFileBuff
+  //
+  //  ver. file descriptor    read stdin
+  IsClosed_stdin = true;
+  time_t timeReadPipe_begin = time(NULL);
+  int curBuffSize = 0;
+
+  while (curBuffSize < StdinTmpFile_Size)
+  {
+    int tickDemandSize = StdinTmpFile_Size - curBuffSize;  //要求サイズ
+    int readsize = _read(fdStdin, tmpFileBuff + curBuffSize, tickDemandSize);
+
+    if (readsize == -1)                                    //fail to connect
+    {
+      //標準入力がリダイレクトされるまで待機、１２０秒超過で終了
+      //一度接続を確認したらタイムアウトはしない
+      if (IsClosed_stdin && time(NULL) - timeReadPipe_begin < 120)
+      {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        continue;
+      }
+      else
+        return 1;					                                 //time out.
+    }
+    else if (readsize == 0)
+      return 1;		                                         //end of stream. too small source.
+
+    curBuffSize += readsize;
+    IsClosed_stdin = false;
+  }
+
+  if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
+  StdinTmpFile_Size = curBuffSize;
+
+  //  ver. file pointer       read stdin
+  //IsClosed_stdin = true;
+  //int readsize = fread(stdinBuff, StdinTmpFile_Size, 1, fpStdin);
+  //if (readsize == 0)  return 1;        //end of stream. too small source.
+  //IsClosed_stdin = false;
+
+  //
+  //Write StdinTmpFile
+  //
+  // fdで開くと終了時に削除できなかった。FILE*で開く。
+
+  //  ver. file descriptor    StdinTmpFile
+  //int writefd;
+  //if ((StdinTmpFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;
+  //if ((writefd = _open(StdinTmpFile_Path, _O_BINARY | _O_CREAT | _O_WRONLY)) == -1) return 1;
+  //if (_write(writefd, stdinBuff, Size_stdinBuff) != Size_stdinBuff) return 1;
+  //_close(writefd);
+
+  //  ver. file pointer       StdinTmpFile
+  FILE * writefp;
+  if ((StdinTmpFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;    //create file name
+  if ((writefp = fopen(StdinTmpFile_Path, "wb")) == NULL) return 1;            //open
+  if (fwrite(tmpFileBuff, StdinTmpFile_Size, 1, writefp) == 0) return 1;       //write
+  fclose(writefp);                                                             //close
+
+  // Reopen StdinTmpFile to read
+  if ((fdStdinTmpFile = _open(StdinTmpFile_Path, _O_RDONLY | _O_BINARY)) == -1) return 1; //open
+  strcpy(Infilename[NumLoadedFiles], StdinTmpFile_Path);                       //d2vファイル３行目のファイル名
+  Infile[NumLoadedFiles] = fdStdinTmpFile;                                     //入力ファイルをStdinTmpFileに
+  NumLoadedFiles = 1;
+
+  // release tmpFileBuff
+  if (tmpFileBuff != NULL)
+  {
+    delete[] tmpFileBuff;
+    tmpFileBuff = NULL;
+  }
+
+  return 0;
+}
+/*pf_end_append*/
+//==========================================================================
