@@ -2999,8 +2999,8 @@ void ThreadKill(int mode)
     //一時ファイル削除、２回目のThreadKill(int)で削除
     if (Mode_Stdin && HasExtraData_fromStdin)
     {
-      _close(fdStdinTmpFile);
-      remove(StdinTmpFile_Path);
+      _close(fdStdinStreamFile);
+      remove(StdinStreamFile_Path);
     }
 
     /*pf_end_append*/
