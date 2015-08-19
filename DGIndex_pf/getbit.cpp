@@ -722,7 +722,8 @@ void Next_Transport_Packet()
   bool pmt_check = false;
   unsigned int check_num_pmt = 0;
 
-  //stdin‚Å“Ç‚İ‚Ş‚Ætime_limit‚Éˆø‚ÁŠ|‚©‚é‚±‚Æ‚ª‚ ‚Á‚½
+  //“ü—Í‚ª‚T•b‚±‚È‚¢‚±‚Æ‚Í‚ ‚è‚¤‚é‚Ì‚Å‰„’·
+  //time_limit‚É‚©‚©‚ç‚È‚¢‚æ‚¤‚É 5000 ¨ 5 * 60 * 1000‚É•ÏX
   unsigned int time_limit = 5 * 60 * 1000;/*pf_append*/
   //unsigned int time_limit = 5000;/*pf_off*/
 #ifdef _DEBUG
@@ -3216,9 +3217,9 @@ void UpdateInfo()
     processed += _telli64(Infile[CurrentFile]);
     processed *= TRACK_PITCH;
 
-    //processed /= Infiletotal;/*pf_off*/
-    if (Mode_Stdin) processed = -1;/*pf_append*/
-    else processed /= Infiletotal;/*pf_append*/
+    //processed /= Infiletotal;       /*pf_off*/
+    if (Mode_Stdin) processed = -1;   /*pf_append*/
+    else processed /= Infiletotal;    /*pf_append*/
 
     trackpos = (int)processed;
     SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, trackpos);
