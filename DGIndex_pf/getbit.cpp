@@ -75,33 +75,6 @@ int _donread(int fd, void *buffer, unsigned int count)
   }
 
   //Log
-  //if (Mode_Stdin && IsClosed_stdin)
-  //{
-  //  char  drive[32], directory[256], filename_ts[256], ext_ts[32];
-  //  _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext_ts);
-
-  //  char logPath[256];
-  //  sprintf(logPath, "%s%s", drive, directory);
-  //  sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext_ts, ".DGI.log");
-  //  if (pfLogger) pfLogger.close();
-  //  pfLogger = std::ofstream(logPath, std::ios::app);
-
-  //  if (pfLogger)
-  //  {
-  //    Refresh_LogTimeCode();
-  //    pfLogger << std::endl;
-  //    pfLogger << "-------------------" << std::endl;
-  //    pfLogger << LogTimeCode << std::endl;
-  //    pfLogger << Stdin_SourcePath << std::endl;
-
-  //    __int64 next_fpos = fpos_tracker + bytes;
-  //    pfLogger << " IsClosed_stdin  " << std::endl;
-  //    pfLogger << "    count, bytes  =  " << count << ", " << bytes << std::endl;
-  //    pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
-  //    pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
-  //    pfLogger.close();
-  //  }
-  //}
   LastReadByte = bytes;                //デバッグ用
 
   fpos_tracker += bytes;               //d2vに書き込むファイル位置はfpos_trackerを元に計算する
@@ -203,67 +176,67 @@ void Check_ReadSpeedLimit(unsigned int readsize)
 //
 void Validate_fpos()
 {
-  //*pf_append*/
-  if (HasExtraData_fromStdin)
-  {
-    //エラー
-    //StdinStreamFile_Sizeを大きくしてください。
-    //  fpos_tracker < StdinStreamFile_Size   にする
-    if (Flg_Exist_morebuffLog == false)
-    {
-      if (Mode_Stdin && IsClosed_stdin)
-      {
-        char  drive[32], directory[256], filename_ts[256], ext[32];
-        _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
+  ////*pf_append*/
+  //if (HasExtraData_fromStdin)
+  //{
+  //  //エラー
+  //  //StdinStreamFile_Sizeを大きくしてください。
+  //  //  fpos_tracker < StdinStreamFile_Size   にする
+  //  if (Flg_Exist_morebuffLog == false)
+  //  {
+  //    if (Mode_Stdin && IsClosed_stdin)
+  //    {
+  //      char  drive[32], directory[256], filename_ts[256], ext[32];
+  //      _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
 
-        char logPath[256];
-        sprintf(logPath, "%s%s", drive, directory);
-        sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext, ".DGI.log");
-        if (pfLogger) pfLogger.close();
-        pfLogger = std::ofstream(logPath, std::ios::app);
+  //      char logPath[256];
+  //      sprintf(logPath, "%s%s", drive, directory);
+  //      sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext, ".DGI.log");
+  //      if (pfLogger) pfLogger.close();
+  //      pfLogger = std::ofstream(logPath, std::ios::app);
 
-        if (pfLogger)
-        {
-          Refresh_LogTimeCode();
-          pfLogger << std::endl;
-          pfLogger << "-------------------" << std::endl;
-          pfLogger << LogTimeCode << std::endl;
-          pfLogger << Stdin_SourcePath << std::endl;
+  //      if (pfLogger)
+  //      {
+  //        Refresh_LogTimeCode();
+  //        pfLogger << std::endl;
+  //        pfLogger << "-------------------" << std::endl;
+  //        pfLogger << LogTimeCode << std::endl;
+  //        pfLogger << Stdin_SourcePath << std::endl;
 
-          __int64 next_fpos = fpos_tracker + LastReadByte;
-          pfLogger << " IsClosed_stdin  " << std::endl;
-          pfLogger << "    LastReadByte  =  " << LastReadByte << std::endl;
-          pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
-          pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
-          pfLogger.close();
-        }
-      }
+  //        __int64 next_fpos = fpos_tracker + LastReadByte;
+  //        pfLogger << " IsClosed_stdin  " << std::endl;
+  //        pfLogger << "    LastReadByte  =  " << LastReadByte << std::endl;
+  //        pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
+  //        pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
+  //        pfLogger.close();
+  //      }
+  //    }
 
-      char  drive[32], directory[256], filename_ts[256], ext[32];
-      _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
+  //    char  drive[32], directory[256], filename_ts[256], ext[32];
+  //    _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
 
-      char logPath[512];
-      sprintf(logPath, "%s%s", drive, directory);
-      sprintf(logPath, "%s%s%s%s%s", logPath, "morebuff__", filename_ts, ext, ".DGI.log");
+  //    char logPath[512];
+  //    sprintf(logPath, "%s%s", drive, directory);
+  //    sprintf(logPath, "%s%s%s%s%s", logPath, "morebuff__", filename_ts, ext, ".DGI.log");
 
-      std::ofstream logger = std::ofstream(logPath, std::ios::app);
+  //    std::ofstream logger = std::ofstream(logPath, std::ios::app);
 
-      if (logger)
-      {
-        Refresh_LogTimeCode();
-        logger << std::endl;
-        logger << "-------------------" << std::endl;
-        logger << LogTimeCode << std::endl;
-        logger << Stdin_SourcePath << std::endl;
-        logger << "   getbit.cpp    Line 293 " << std::endl;
-        logger << "   fpos_tracker < StdinStreamFile_Size   にする  " << std::endl;
-        logger << "   fpos_tracker      =  " << fpos_tracker << std::endl;
-        logger << "   StdinStreamFile_Size =  " << StdinStreamFile_Size << std::endl;
-      }
-      logger.close();
-      Flg_Exist_morebuffLog = true;
-    }
-  }
+  //    if (logger)
+  //    {
+  //      Refresh_LogTimeCode();
+  //      logger << std::endl;
+  //      logger << "-------------------" << std::endl;
+  //      logger << LogTimeCode << std::endl;
+  //      logger << Stdin_SourcePath << std::endl;
+  //      logger << "   getbit.cpp    Line 231 " << std::endl;
+  //      logger << "   fpos_tracker < StdinStreamFile_Size   にする  " << std::endl;
+  //      logger << "   fpos_tracker      =  " << fpos_tracker << std::endl;
+  //      logger << "   StdinStreamFile_Size =  " << StdinStreamFile_Size << std::endl;
+  //    }
+  //    logger.close();
+  //    Flg_Exist_morebuffLog = true;
+  //  }
+  //}
   /*pf_end_append*/
 }
 
