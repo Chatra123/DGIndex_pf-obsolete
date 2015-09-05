@@ -162,27 +162,13 @@ void WriteD2VLine(int finish)
   }
   entries[r++] = ref;
 
-  /*pf_append*/
   for (m = 0; m < gop_entries_ndx; m++)
   {
-    /*
-    ドロップの多いファイルだと8byte以上の値をtempにいれようとしたので
-    事前にチェックする。
-    */
-    int preCheck = (entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-    if (preCheck < 0 || 255 < preCheck) break;
-
-    sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-    strcat(D2VLine, temp);
+  	sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+  	strcat(D2VLine, temp);
   }
-  /*pf_end_append*/
 
-  /*pf_off*/
-  ////for (m = 0; m < gop_entries_ndx; m++)
-  ////{
-  ////	sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-  ////	strcat(D2VLine, temp);
-  ////}
+
 
   if (finish) strcat(D2VLine, " ff\n");
   else strcat(D2VLine, "\n");
