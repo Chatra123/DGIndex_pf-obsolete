@@ -164,9 +164,44 @@ void WriteD2VLine(int finish)
 
   for (m = 0; m < gop_entries_ndx; m++)
   {
-  	sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-  	strcat(D2VLine, temp);
+    /* pf_append */
+    int preCheck = (entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+
+
+    if (preCheck < 0x32 || 0xf3 < preCheck)
+    {
+      //デバッグ用  チェックだけ
+      sprintf(pf_gop_Log, "☆　precheck is out of range = %02x \n", preCheck);
+
+      if (10 < time(NULL) - timeFlushLog_gop)
+      {
+        Logging_pf(pf_gop_Log);
+        pf_gop_Log[0] = '\0';
+        timeFlushLog_gop = time(NULL);
+      }
+    }
+    min_gop_idx = (min_gop_idx < preCheck) ? min_gop_idx : preCheck;
+    max_gop_idx = (preCheck < max_gop_idx) ? max_gop_idx : preCheck;
+    int gop = entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6);
+    /*end pf_append */
+
+    sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+    strcat(D2VLine, temp);
+
+
+    /*  pf_off  */
+    //sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
+    //strcat(D2VLine, temp);
   }
+
+  if (finish){
+    char log[128] = "";
+    sprintf(log, "min,max  = %02x , %02x \n", min_gop_idx, max_gop_idx);
+    Logging_ts(log);
+  }
+
+
+
 
 
 

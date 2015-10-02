@@ -641,6 +641,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // CLI invocation.
     if (parse_cli(lpCmdLine, ucCmdLine) != 0)
       exit(0);
+
+    /*pf_append*/
+    if (Initialize_pf() != 0)
+      exit(0);
+
     if (CLIParseD2V & PARSE_D2V_INPUT_FILE)
       SendMessage(hWnd, CLI_PARSE_D2V_MESSAGE, 0, 0);
     if (NumLoadedFiles)
@@ -668,13 +673,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   // Main message loop
   while (GetMessage(&msg, NULL, 0, 0))
   {
+
+    /*pf_append*/
+    if (60 * 20 < time(NULL) - timeFlushLog_main)
+    {
+      char log[256] = "";
+      sprintf(log, "min,max  = %02x , %02x \n", min_gop_idx, max_gop_idx);
+      Logging_ts(log);
+
+      timeFlushLog_main = time(NULL);
+    }
+
+
+
     if (!TranslateAccelerator(hWnd, hAccel, &msg))
     {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
-
-    //if (Flg_ExitProcess) break;
   }
 
   return msg.wParam;
@@ -1108,8 +1124,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         sprintf(szBuffer, "%s.d2v", szOutput);
         if (CLIActive)
         {
-          ////if ((D2VFile = fopen(szBuffer, "w+")) == 0)
-          if ((D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR)) == 0)													/*pf_append*/
+          if ((D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR)) == NULL)													/*pf_append*/
           {
             if (ExitOnEnd)
             {
@@ -1123,12 +1138,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
               CLIParseD2V = PARSE_D2V_NONE;
             }
           }
+
           strcpy(D2VFilePath, szBuffer);
         }
         else
         {
-          ////	if (D2VFile = fopen(szBuffer, "r"))
-          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))													/*pf_append*/
+          // if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))	         /*pf_append*/
+          if (D2VFile = fopen(szBuffer, "r"))
           {
             char line[255];
 
@@ -1138,9 +1154,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
               MB_YESNO | MB_ICONWARNING) != IDYES)
               break;
           }
+
           ////D2VFile = fopen(szBuffer, "w+");
           D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR);													/*pf_append*/
           strcpy(D2VFilePath, szBuffer);
+        }
+
+        /*pf_append_dbg*/
+        if (D2VFile == NULL)
+        {
+          char log[256] = "";
+          sprintf(log, "d2v open error,  fpos_tracker  %I64d \n", fpos_tracker);
+          Logging_pf(log);
         }
 
         if (D2VFile != 0)
@@ -2956,11 +2981,20 @@ void ThreadKill(int mode)
     //ファイル終端が確定したので書き換え
     if (D2V_Flag && Mode_Stdin)
     {
-      std::list<char*> text;
+      //再オープン
       fclose(D2VFile);
 
+      D2VFile = NULL;
+      for (size_t i = 0; i < 10; i++)
+      {
+        D2VFile = _fsopen(D2VFilePath, "r", _SH_DENYWR);
+        if (D2VFile != NULL) break;
+        Sleep(1000);
+      }
+
       //全行読み込み
-      D2VFile = _fsopen(D2VFilePath, "r", _SH_DENYWR);
+      std::list<char*> text;
+
       if (D2VFile)
       {
         char line[512];
@@ -2981,9 +3015,18 @@ void ThreadKill(int mode)
         }
       }
 
-      //再書き込み
+      //再オープン
       fclose(D2VFile);
-      D2VFile = _fsopen(D2VFilePath, "w", _SH_DENYWR);
+
+      D2VFile = NULL;
+      for (size_t i = 0; i < 10; i++)
+      {
+        D2VFile = _fsopen(D2VFilePath, "w", _SH_DENYWR);
+        if (D2VFile != NULL) break;
+        Sleep(1000);
+      }
+
+      //再書き込み
       if (D2VFile)
       {
         while (0 < text.size())
@@ -2996,13 +3039,29 @@ void ThreadKill(int mode)
       }
     }
 
-    //一時ファイル削除、２回目のThreadKill(int)で削除
-    if (Mode_Stdin && HasExtraData_fromStdin)
+    //
+    //D2V作成前にStdinから追加の読込みをした。
+    //データの連続性が維持できないので、プロセスを強制終了。
+    //StdinHeadFile_Size_CmdLineを増やして対応する。
+    //
+    if (D2V_Flag == false && GetExtraData_fromStdin)
     {
-      _close(fdStdinStreamFile);
-      remove(StdinStreamFile_Path);
+      char log[256] = "";
+      sprintf(log, "%s StdinHeadBuff is too small          \n", log);
+      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f \n", log, StdinHeadFile_Size_CmdLine);
+      sprintf(log, "%s   StdinHeadFile_Size      = %d      \n", log, StdinHeadFile_Size);
+      sprintf(log, "%s   fpos_tracker            = %I64d   \n", log, fpos_tracker);
+      Logging_ts(log);
+      exit(0);
     }
 
+
+    //一時ファイル削除、２回目のThreadKill(int)で削除
+    if (D2V_Flag && Mode_Stdin)
+    {
+      _close(fdStdinHeadFile);
+      remove(StdinHeadFile_Path);
+    }
     /*pf_end_append*/
     //==========================================================================
 

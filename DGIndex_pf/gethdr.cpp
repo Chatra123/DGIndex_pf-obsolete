@@ -161,7 +161,11 @@ int Get_Hdr(int mode)
       // We prefer to index the sequence header corresponding to this
       // GOP, but if one doesn't exist, we index the picture header of the I frame.
       if (SystemStream_Flag != ELEMENTARY_STREAM)
+      {
+
         d2v_current.position = CurrentPackHeaderPosition;
+
+      }
       else
       {
         //                  dprintf("DGIndex: Index sequence header at %d\n", Rdptr - 8 + (32 - BitsLeft)/8);
@@ -169,6 +173,21 @@ int Get_Hdr(int mode)
           - (BUFFER_SIZE - (Rdptr - Rdbfr))
           - 8
           + (32 - BitsLeft) / 8;
+
+
+        long long int d2v_cur_pos = fpos_tracker
+          - (BUFFER_SIZE - (Rdptr - Rdbfr))
+          - 8
+          + (32 - BitsLeft) / 8;
+
+        /*pf_append*/
+        if (d2v_current.position != d2v_cur_pos){
+          char log[128] = "";
+          sprintf(log, "d2v_cur_pos is not eq,  d2v_cur_pos = %I64d", d2v_cur_pos);
+          Logging_pf(log);
+        }
+
+
       }
       Get_Bits(32);
       sequence_header();
@@ -470,7 +489,7 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
     if (Info_Flag)
       UpdateInfo();
     UpdateWindowText(PICTURE_HEADER);
-    }
+  }
 
   vbv_delay = Get_Bits(16);
 
@@ -515,7 +534,7 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
       d2v_current.position = start;
     }
   }
-  }
+}
 
 /* decode slice header */
 /* ISO/IEC 13818-2 section 6.2.4 */
@@ -887,7 +906,7 @@ static void picture_coding_extension()
     burst_amplitude = Get_Bits(7);
     sub_carrier_phase = Get_Bits(8);
   }
-    }
+}
 
 /* decode extra bit information */
 /* ISO/IEC 13818-2 section 6.2.3.4. */
