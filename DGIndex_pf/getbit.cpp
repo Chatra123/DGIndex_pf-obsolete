@@ -45,6 +45,7 @@ unsigned int start;
 //}
 
 /*pf_append*/
+//_donreadを標準入力に対応
 int _donread(int fd, void *buffer, unsigned int count)
 {
   unsigned int bytes = 0;
@@ -54,75 +55,78 @@ int _donread(int fd, void *buffer, unsigned int count)
   {
     if (!_eof(fd))
     {
-      //StdinStreamFile
+      //StdinHeadFile
       bytes = _read(fd, buffer, count);
       if (bytes != count)
       {
-        //残りをread_stdin
-        int append = read_stdin_fd((char*)buffer + bytes, count - bytes);
+        //残りを標準入力
+        int append = read_stdin((char*)buffer + bytes, count - bytes);
         bytes += append;
       }
     }
     else
       //標準入力
-      bytes = read_stdin_fd((char*)buffer, count);
+      bytes = read_stdin((char*)buffer, count);
   }
   else
   {
     //ファイル
     bytes = _read(fd, buffer, count);
-    Check_ReadSpeedLimit(bytes);
+    Limit_ReadSpeed(bytes);
   }
-
-  //Log
-  LastReadByte = bytes;                //デバッグ用
 
   fpos_tracker += bytes;               //d2vに書き込むファイル位置はfpos_trackerを元に計算する
 
+  //log
+  if (bytes < BUFFER_SIZE)
+  {
+    char log[256] = "";
+    sprintf(log, "%s finish read              \n", log);
+    sprintf(log, "%s   fpos_tracker   = %I64d \n", log, fpos_tracker);
+    Logging_ts(log);
+  }
+
+
   return bytes;
-}
-
-//
-//LogTimeCode更新
-//
-void Refresh_LogTimeCode()
-{
-  LogTimeCode[0] = '\0';
-  SYSTEMTIME st;
-  GetSystemTime(&st);
-
-  char szTime[25] = { 0 };
-  // wHourを９時間足して、日本時間にする
-  wsprintf(szTime, "%04d/%02d/%02d %02d:%02d:%02d %03d",
-    st.wYear, st.wMonth, st.wDay,
-    st.wHour + 9, st.wMinute, st.wSecond, st.wMilliseconds);
-
-  sprintf(LogTimeCode, "%s", szTime);
 }
 
 
 //
 //標準入力からデータ取得
-int read_stdin_fd(void *buffer, const int demandTotalSize)
+//
+int read_stdin(void *buffer, const int demandSize)
 {
   int read_sum = 0;
 
-  while (read_sum < demandTotalSize)
+  while (read_sum < demandSize)
   {
-    char tmpbuff[2048];
-    int tickDemandSize = demandTotalSize - read_sum;
+    char tmpbuff[BUFFER_SIZE];         //１回の_read()で読込むbuff
+    int tickReadSize = demandSize - read_sum;
 
-    int readsize = _read(fdStdin, tmpbuff, tickDemandSize);
+    int readsize = _read(fdStdin, tmpbuff, tickReadSize);
     if (readsize == -1)
     {
       // If fd is invalid
       // If execution is allowed to continue, the function returns -1 and sets errno to EBADF.
       IsClosed_stdin = true;
+
+      //log
+      char log[256] = "";
+      sprintf(log, "%s pipe read error        ☆  ☆  ☆  \n", log);
+      sprintf(log, "%s readsize == -1           \n", log);
+      Logging_pf(log);
+
       return 0;
     }
     else if (readsize == 0)
     {
       IsClosed_stdin = true;
+
+      //log
+      char log[256] = "";
+      sprintf(log, "%s pipe disconnect          \n", log);
+      Logging_ts(log);
+
       break;                           //パイプ終端、接続切断
     }
 
@@ -130,118 +134,50 @@ int read_stdin_fd(void *buffer, const int demandTotalSize)
     read_sum += readsize;
   }
 
-  HasExtraData_fromStdin = true;
+  GetExtraData_fromStdin = true;
   return read_sum;
 }
 
 //
 //ファイル読込速度制限
 //
-void Check_ReadSpeedLimit(unsigned int readsize)
+void Limit_ReadSpeed(unsigned int readsize)
 {
-  if (0 < ReadSpeedLimit_byArg)
+  if (0 < SpeedLimit)
   {
-    tickReadSize_speedlimit += readsize;                                       //単位時間の読込み量
+    tickReadSize_speedlimit += readsize;                                       //単位時間の読込み量  200ms単位
     auto tickDuration = system_clock::now() - tickBeginTime_speedlimit;        //計測時間
     auto duration_ms = duration_cast<std::chrono::milliseconds>(tickDuration).count();
 
     if (200 < duration_ms)
     {
-      //単位時間ごとにカウンタリセット
+      //単位時間ごとにカウンタリセット  200ms単位
       tickBeginTime_speedlimit = system_clock::now();
       tickReadSize_speedlimit = 0;
     }
 
     //制限をこえたらsleep_for
-    if (ReadSpeedLimit_byArg * (200.0 / 1000.0) < tickReadSize_speedlimit)        //byte/sec
+    if (SpeedLimit * (200.0 / 1000.0) < tickReadSize_speedlimit)        //byte/sec
       std::this_thread::sleep_for(std::chrono::milliseconds(200 - duration_ms));
   }
 }
 
-//
-//デバッグ用
-//fpos_trackerの整合性をチェック
-//
-//　_lseeki64 呼び出し時に標準入力から追加のデータを取得していないことを確認する。
-//　_lseeki64 でファイルポジションを先頭にもどすので追加のデータを取得していたらダメ。
-//
-//
-//		_lseeki64(Infile[0], 0, SEEK_SET);
-//    fpos_tracker = _telli64(Infile[process.startfile]);
-//　の前に
-//    Validate_fpos();
-//　を実行している。
-//
-//　問題がなければValidate_fpos();を削除していい。
-//
-void Validate_fpos()
-{
-  ////*pf_append*/
-  //if (HasExtraData_fromStdin)
-  //{
-  //  //エラー
-  //  //StdinStreamFile_Sizeを大きくしてください。
-  //  //  fpos_tracker < StdinStreamFile_Size   にする
-  //  if (Flg_Exist_morebuffLog == false)
-  //  {
-  //    if (Mode_Stdin && IsClosed_stdin)
-  //    {
-  //      char  drive[32], directory[256], filename_ts[256], ext[32];
-  //      _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
-
-  //      char logPath[256];
-  //      sprintf(logPath, "%s%s", drive, directory);
-  //      sprintf(logPath, "%s%s%s%s%s", logPath, "", filename_ts, ext, ".DGI.log");
-  //      if (pfLogger) pfLogger.close();
-  //      pfLogger = std::ofstream(logPath, std::ios::app);
-
-  //      if (pfLogger)
-  //      {
-  //        Refresh_LogTimeCode();
-  //        pfLogger << std::endl;
-  //        pfLogger << "-------------------" << std::endl;
-  //        pfLogger << LogTimeCode << std::endl;
-  //        pfLogger << Stdin_SourcePath << std::endl;
-
-  //        __int64 next_fpos = fpos_tracker + LastReadByte;
-  //        pfLogger << " IsClosed_stdin  " << std::endl;
-  //        pfLogger << "    LastReadByte  =  " << LastReadByte << std::endl;
-  //        pfLogger << "    fpos_tracker  =  " << fpos_tracker << std::endl;
-  //        pfLogger << "    next_fpos     =  " << next_fpos << std::endl;
-  //        pfLogger.close();
-  //      }
-  //    }
-
-  //    char  drive[32], directory[256], filename_ts[256], ext[32];
-  //    _splitpath(Stdin_SourcePath, drive, directory, filename_ts, ext);
-
-  //    char logPath[512];
-  //    sprintf(logPath, "%s%s", drive, directory);
-  //    sprintf(logPath, "%s%s%s%s%s", logPath, "morebuff__", filename_ts, ext, ".DGI.log");
-
-  //    std::ofstream logger = std::ofstream(logPath, std::ios::app);
-
-  //    if (logger)
-  //    {
-  //      Refresh_LogTimeCode();
-  //      logger << std::endl;
-  //      logger << "-------------------" << std::endl;
-  //      logger << LogTimeCode << std::endl;
-  //      logger << Stdin_SourcePath << std::endl;
-  //      logger << "   getbit.cpp    Line 231 " << std::endl;
-  //      logger << "   fpos_tracker < StdinStreamFile_Size   にする  " << std::endl;
-  //      logger << "   fpos_tracker      =  " << fpos_tracker << std::endl;
-  //      logger << "   StdinStreamFile_Size =  " << StdinStreamFile_Size << std::endl;
-  //    }
-  //    logger.close();
-  //    Flg_Exist_morebuffLog = true;
-  //  }
-  //}
-  /*pf_end_append*/
-}
-
 /*pf_end_append*/
 //==========================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #define MONO 3
 #define STEREO 0
@@ -323,7 +259,7 @@ int PTSDifference(__int64 apts, __int64 vpts, int *result)
       MB_OK | MB_ICONWARNING);
     // Reset data timeout.
     start = timeGetTime();
-  }
+}
   return 0;
 }
 
@@ -340,20 +276,20 @@ FILE *OpenAudio(char *path, char *mode, unsigned int id)
 }
 
 #define LOCATE                                                  \
-                                              		while (Rdptr >= (Rdbfr + BUFFER_SIZE))                          \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                               \
+                                                                    		while (Rdptr >= (Rdbfr + BUFFER_SIZE))                          \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                               \
 Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE);   \
 if (Read < BUFFER_SIZE) Next_File();                        \
 Rdptr -= BUFFER_SIZE;                                       \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}
 
 #define DECODE_AC3                                                              \
 {                                                                               \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
 Packet_Length -= 16;                                                    \
 size = 0;                                                                   \
-                                              		while (Packet_Length > 0)                                                   \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+                                                                    		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                                           \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
 {                                                                       \
 size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size);       \
@@ -368,15 +304,15 @@ size = ac3_decode_data(Rdptr, Packet_Length, size);                 \
 Rdptr += Packet_Length;                                             \
 Packet_Length = 0;                                                  \
 }                                                                       \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}                                                                           \
 }
 
 #define DEMUX_AC3                                                               \
 {                                                                               \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
 Packet_Length -= 16;                                                    \
-                                              		while (Packet_Length > 0)                                                   \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+                                                                    		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                                           \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
 {                                                                       \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
@@ -391,7 +327,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
 Rdptr += Packet_Length;                                             \
 Packet_Length = 0;                                                  \
 }                                                                       \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}                                                                           \
 }
 
 void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsigned char format)
@@ -474,8 +410,8 @@ void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsign
 do {                                                                            \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
 Packet_Length -= 16;                                                    \
-                                              		while (Packet_Length > 0)                                                   \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+                                                                    		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                                           \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
 {                                                                       \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));                    \
@@ -490,15 +426,15 @@ fwrite(Rdptr, Packet_Length, 1, (fp));                              \
 Rdptr += Packet_Length;                                             \
 Packet_Length = 0;                                                  \
 }                                                                       \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}                                                                           \
 } while( 0 )
 
 #define DEMUX_DTS                                                               \
 {                                                                               \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)    \
 Packet_Length -= 16;                                                    \
-                                              		while (Packet_Length > 0)                                                   \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                           \
+                                                                    		while (Packet_Length > 0)                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                                           \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)                            \
 {                                                                       \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);    \
@@ -513,7 +449,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);              \
 Rdptr += Packet_Length;                                             \
 Packet_Length = 0;                                                  \
 }                                                                       \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                           \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}                                                                           \
 }
 
 static char *FTType[5] = {
@@ -611,8 +547,8 @@ void Initialize_Buffer()
 #define SKIP_TRANSPORT_PACKET_BYTES(bytes_to_skip)                      \
 do {                                                                    \
 int temp = (bytes_to_skip);                                         \
-                                              		while (temp  > 0)\
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			{                                                                   \
+                                                                    		while (temp  > 0)\
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			{                                                                   \
 if (temp + Rdptr > BUFFER_SIZE + Rdbfr)                         \
 {                                                               \
 temp  -= BUFFER_SIZE + Rdbfr - Rdptr;                       \
@@ -625,7 +561,7 @@ else                                                            \
 Rdptr += temp;                                              \
 temp = 0;                                                   \
 }                                                               \
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    			}                                                                   \
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              			}                                                                   \
 Packet_Length -= (bytes_to_skip);                                   \
 } while (0)
 
@@ -982,7 +918,7 @@ void Next_Transport_Packet()
         check_audio_packet_continue = 0;
         code = prev_code;
         goto emulated3;
-      }
+          }
       else if (tp.payload_unit_start_indicator)
       {
         check_audio_packet_continue = 0;
@@ -1025,7 +961,7 @@ void Next_Transport_Packet()
           emulated3:
             code = (code << 8) | Get_Byte();
             Packet_Length--;
-          }
+        }
           if ((code & 0xfff80000) != 0xfff80000)
           {
             SKIP_TRANSPORT_PACKET_BYTES(Packet_Length);
@@ -1121,11 +1057,11 @@ void Next_Transport_Packet()
             fputc((code)& 0xff, mpafp);
             DEMUX_MPA_AAC(mpafp);
           }
-        }
       }
+        }
       if (AudioOnly_Flag && Info_Flag && !(AudioPktCount++ % 128))
         UpdateInfo();
-    }
+      }
 
     else if ((Method_Flag == AUDIO_DEMUXALL || Method_Flag == AUDIO_DEMUX) && Start_Flag &&
       tp.pid && (tp.pid == MPEG2_Transport_AudioPID) && (MPEG2_Transport_AudioType == 0x80))
@@ -1535,7 +1471,7 @@ void Next_Transport_Packet()
 
                 audio[0].size += size + audio[0].delay;
                 audio[0].delay = 0;
-              }
+            }
           }
           else
           {
@@ -1544,7 +1480,7 @@ void Next_Transport_Packet()
         }
       if (AudioOnly_Flag && Info_Flag && !(AudioPktCount++ % 128))
         UpdateInfo();
-    }
+          }
     else if ((Method_Flag == AUDIO_DEMUXALL || Method_Flag == AUDIO_DEMUX) && Start_Flag &&
       tp.pid && (tp.pid == MPEG2_Transport_AudioPID) &&
       (MPEG2_Transport_AudioType == 0xfe || MPEG2_Transport_AudioType == 0xffffffff))
@@ -1678,8 +1614,8 @@ void Next_Transport_Packet()
     // fallthrough case
     // skip remaining bytes in current packet
     SKIP_TRANSPORT_PACKET_BYTES(Packet_Length);
-  }
-}
+        }
+      }
 
 // PVA packet data structure.
 typedef struct

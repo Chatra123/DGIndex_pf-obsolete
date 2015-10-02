@@ -304,50 +304,87 @@ XTN int NumLoadedFiles;
 
 //====================================================
 /*pf_append*/
+//
 //Mode
-XTN bool Mode_Stdin;                             //read from file or stdin
-XTN bool Mode_UseBad;                            //Ignore field order transition
-XTN bool Mode_NoDialoge;                         //suspend some dialoge
+//
+XTN bool Mode_Stdin;                     //read from stdin or file
+XTN bool Mode_UseBad;                    //Ignore field order transition
+XTN bool Mode_NoDialoge;                 //suspend some dialoge
 
+//
 //Stdin
-XTN int fdStdin;
-XTN __int64 fpos_tracker;                        //標準入力ストリーム＆一時ファイルを意識しないソースファイル上のポジション
-XTN char Stdin_SourcePath[DG_MAX_PATH];          //d2vファイル３行目に書き込むファイル名
-XTN bool IsClosed_stdin;
+//
+XTN int fdStdin;                         //file discriptor
+XTN __int64 fpos_tracker;                //標準入力＆StdinHeadFileの違いを意識しないＴＳファイル上のポジション
+XTN char Stdin_SourcePath[DG_MAX_PATH];  //d2vファイル３行目に書き込むＴＳファイル名
+XTN bool IsClosed_stdin;                 //パイプ接続がきれたか
 
-//デバッグ用
-//StdinStreamFileから読込む段階なのに標準入力から読込んだか。
-//trueならプロセス終了、StdinStreamFile_Sizeを増やして対応する。
-//morebuffLogで通知する。
-XTN bool HasExtraData_fromStdin;
-XTN bool Flg_Exist_morebuffLog;
+//
+//
+//StdinHeadFileで処理する段階で標準入力を使用したかを判定する。
+//Seekが多用される段階でファイル以外から読み込むとTSファイルの整合性がなくなる。
+//１回目のvoid ThreadKill(int mode)で判定する。（D2V作成前）
+//trueならプロセス終了、StdinHeadFile_Size_CmdLineを増やして対応する。
+//
+XTN bool GetExtraData_fromStdin;         //Stdinから追加で読み込んだか
 
+
+//
 //func
+//
+XTN int Initialize_pf(void);
 XTN int Initialize_stdin(void);
-XTN int read_stdin_fd(void *buff, int);
-XTN void Validate_fpos(void);
+XTN int read_stdin(void *buff, int);
+XTN void Limit_ReadSpeed(unsigned int readsize);
 
-//StdinStreamFile
-//　ストリーム先頭部分をファイルとして取り出す
-XTN int fdStdinStreamFile;
-XTN char* StdinStreamFile_Path;                     //一時ファイルのパス
-XTN int StdinStreamFile_Size;                       //              サイズ
-XTN double StdinStreamFileSize_byArg;               //引数指定によるサイズ
+//
+//StdinHeadFile
+//　ストリーム先頭部分をファイルとして保存
+XTN char* StdinHeadFile_Path;            //先頭部を保存したファイルパス
+XTN int fdStdinHeadFile;                 //file discriptor
+XTN double StdinHeadFile_Size_CmdLine;   //コマンドライン指定のファイルサイズ  MiB
+XTN int StdinHeadFile_Size;              //              実際のファイルサイズ  Byte
 
 //d2vファイル
-XTN time_t timeFlushD2VFile;                        //d2vファイルを更新した時間
+XTN time_t timeFlushD2VFile;             //d2vファイルを更新した時間
 
-//読込速度
-XTN double tickReadSize_speedlimit;                 //速度制限    200ms間の読込み量
-XTN double ReadSpeedLimit_byArg;                    //速度制限    最大読込み速度
-XTN time_point<system_clock, system_clock::duration> tickBeginTime_speedlimit; //速度制限    tickの計測開始時間
-XTN void Check_ReadSpeedLimit(unsigned int readsize);
+//ファイル読込み速度制限
+XTN double tickReadSize_speedlimit;      //200ms間の読込み量
+//                                         200ms間の計測開始時間
+XTN time_point<system_clock, system_clock::duration> tickBeginTime_speedlimit;
+XTN double SpeedLimit_CmdLine;           //コマンドライン指定の最大読込み速度 MiB/sec
+XTN double SpeedLimit;                   //              実際の最大読込み速度 Byte/sec
 
-//ログ           デバッグ用
-XTN std::ofstream pfLogger;
-XTN char LogTimeCode[32];
-XTN void Refresh_LogTimeCode();
-XTN __int64 LastReadByte;
+
+
+
+//
+//ログ　　デバッグ用
+//
+XTN bool Enable_pfLog;                   //pfLogの有効、無効
+XTN time_t timeFlushLog_main;            //mainメッセージループでのログ用
+
+XTN char LogTimeCode[32];                //ログ用タイムコード
+XTN void Refresh_LogTimeCode();          //ログ用タイムコード更新
+
+//tsごとのログファイル
+XTN std::ofstream logger_ts;
+XTN void Logging_ts(char* msg);
+
+//共有ログファイル
+XTN std::ofstream logger_pf;
+XTN void Logging_pf(char* msg);
+
+//デバッグ用
+//d2vに書き込むgop_idxのレンジを調べる。
+//場合によってはレンジ以外の値をはじくようにするかも。
+XTN int min_gop_idx, max_gop_idx;
+
+
+
+XTN char pf_gop_Log[4096];
+XTN time_t timeFlushLog_gop;
+
 
 /*pf_end_append*/
 //====================================================
