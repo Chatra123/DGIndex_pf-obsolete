@@ -34,6 +34,27 @@ extern void StartVideoDemux(void);
 
 DWORD WINAPI MPEG2Dec(LPVOID n)
 {
+  /* pf_append */
+  char log[256] = "";
+  sprintf(log, "MPEG2Dec  = %02d", process.locate);
+  Logging_ts(log);
+  /*
+  #define LOCATE_INIT         0
+  #define LOCATE_FORWARD      1
+  #define LOCATE_BACKWARD     -1
+  #define LOCATE_SCROLL       2
+  #define LOCATE_RIP          3
+  #define LOCATE_PLAY         4
+  #define LOCATE_DEMUX_AUDIO  5
+  */
+
+
+
+
+
+
+
+
   int i = (int)n; // Prevent compiler warning.
   extern __int64 VideoPTS;
   extern __int64 AudioPTS;
@@ -200,7 +221,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       if (_read(Infile[0], buf, 1) == 0)
       {
-        if (Mode_NoDialoge == false)/*pf_append*/
+        if (Mode_NoDialog == false)/*pf_append*/
           MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
 
         // EOF
@@ -294,7 +315,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
         /*pf_append*/
         //ƒXƒNƒ‰ƒ“ƒuƒ‹‚ª‰ðœ‚Å‚«‚Ä‚¢‚È‚¢“™
         // We didn't find a sequence header.
-        if (Mode_NoDialoge == false)/*pf_append*/
+        if (Mode_NoDialog == false)/*pf_append*/
           MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
 
         // We didn't find a sequence header.
@@ -571,6 +592,7 @@ static BOOL GOPBack()
     for (;;)
     {
       curloc = _telli64(Infile[process.startfile]);
+
       if (curloc >= endloc) break;
       Get_Hdr(0);
       if (Stop_Flag == true)

@@ -41,11 +41,14 @@
 /*pf_append*/
 #include <thread>
 #include <chrono>
-using namespace std::chrono;
 
 //log
 #include <fstream>
 #include <iostream>
+#include <deque>
+#include <mutex>
+#include <thread>
+#include <string>
 /*pf_end_append*/
 
 #ifdef GLOBAL
@@ -143,8 +146,14 @@ XTN bool bIsWindowsXPorLater;
 #define CHROMA422       2
 #define CHROMA444       3
 
-#define SECTOR_SIZE             2048
-#define BUFFER_SIZE             2048
+#define SECTOR_SIZE             2048     //  /*pf_append_off*/
+
+
+//#define BUFFER_SIZE         1024000      // 1024 KB   /*pf_append*/
+#define BUFFER_SIZE          512000        //  512 KB   /*pf_append*/
+//#define BUFFER_SIZE          204800      //  204 KB   /*pf_append*/
+//#define BUFFER_SIZE            2048      //  /*pf_append_off*/
+
 #define MAX_FILE_NUMBER         512
 #define MAX_PICTURES_PER_GOP    500
 #define MAX_GOPS                1000000
@@ -302,14 +311,45 @@ XTN int Fault_Flag;
 XTN int CurrentFile;
 XTN int NumLoadedFiles;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //====================================================
 /*pf_append*/
+using namespace std::chrono;
+
 //
 //Mode
 //
 XTN bool Mode_Stdin;                     //read from stdin or file
 XTN bool Mode_UseBad;                    //Ignore field order transition
-XTN bool Mode_NoDialoge;                 //suspend some dialoge
+XTN bool Mode_NoDialog;                  //suspend some dialog
 
 //
 //Stdin
@@ -349,11 +389,11 @@ XTN int StdinHeadFile_Size;              //              実際のファイルサイズ  B
 XTN time_t timeFlushD2VFile;             //d2vファイルを更新した時間
 
 //ファイル読込み速度制限
-XTN double tickReadSize_speedlimit;      //200ms間の読込み量
-//                                         200ms間の計測開始時間
+XTN double tickReadSize_speedlimit;      //500ms間の読込み量
+//                                         500ms間の計測開始時間
 XTN time_point<system_clock, system_clock::duration> tickBeginTime_speedlimit;
-XTN double SpeedLimit_CmdLine;           //コマンドライン指定の最大読込み速度 MiB/sec
-XTN double SpeedLimit;                   //              実際の最大読込み速度 Byte/sec
+XTN double SpeedLimit_CmdLine;           //コマンドライン指定の最大読込み速度  MiB/sec
+XTN double SpeedLimit;                   //                    最大読込み速度 Byte/sec
 
 
 
@@ -362,32 +402,58 @@ XTN double SpeedLimit;                   //              実際の最大読込み速度 By
 //ログ　　デバッグ用
 //
 XTN bool Enable_pfLog;                   //pfLogの有効、無効
-XTN time_t timeFlushLog_main;            //mainメッセージループでのログ用
 
-XTN char LogTimeCode[32];                //ログ用タイムコード
-XTN void Refresh_LogTimeCode();          //ログ用タイムコード更新
-
-//tsごとのログファイル
-XTN std::ofstream logger_ts;
-XTN void Logging_ts(char* msg);
+XTN void Logger_Initilaize();            //logger  func()
+XTN std::string log_srcname;             //ログ用　入力ソース名
+XTN std::string Get_TimeCode();          //タイムコード更新
 
 //共有ログファイル
-XTN std::ofstream logger_pf;
 XTN void Logging_pf(char* msg);
 
-//デバッグ用
-//d2vに書き込むgop_idxのレンジを調べる。
-//場合によってはレンジ以外の値をはじくようにするかも。
-XTN int min_gop_idx, max_gop_idx;
-
-
-
-XTN char pf_gop_Log[4096];
-XTN time_t timeFlushLog_gop;
-
+//tsごとのログファイル
+XTN void Logging_ts(char* msg);
+XTN void Logging_ts(std::string  msg);
+XTN std::string logpath_ts;
+XTN std::string threadkill_msg;
 
 /*pf_end_append*/
 //====================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 XTN int FO_Flag;
 XTN int iDCT_Flag;

@@ -175,12 +175,12 @@ int Get_Hdr(int mode)
           + (32 - BitsLeft) / 8;
 
 
+
+        /*pf_append*/
         long long int d2v_cur_pos = fpos_tracker
           - (BUFFER_SIZE - (Rdptr - Rdbfr))
           - 8
           + (32 - BitsLeft) / 8;
-
-        /*pf_append*/
         if (d2v_current.position != d2v_cur_pos){
           char log[128] = "";
           sprintf(log, "d2v_cur_pos is not eq,  d2v_cur_pos = %I64d", d2v_cur_pos);
@@ -476,7 +476,10 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
     if (Mode_Stdin)
     {
       if (IsClosed_stdin)
+      {
+        Logging_ts("IsClosed_stdin==true");
         ThreadKill(END_OF_DATA_KILL);
+      }
     }
     else
     {

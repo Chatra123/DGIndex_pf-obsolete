@@ -166,6 +166,8 @@ static BOOL bIsWindowsVersionOK(DWORD dwMajor, DWORD dwMinor, WORD dwSPMajor)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+
+
   MSG msg;
   HACCEL hAccel;
   int i;
@@ -673,19 +675,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   // Main message loop
   while (GetMessage(&msg, NULL, 0, 0))
   {
-
-    /*pf_append*/
-    if (60 * 20 < time(NULL) - timeFlushLog_main)
-    {
-      char log[256] = "";
-      sprintf(log, "min,max  = %02x , %02x \n", min_gop_idx, max_gop_idx);
-      Logging_ts(log);
-
-      timeFlushLog_main = time(NULL);
-    }
-
-
-
     if (!TranslateAccelerator(hWnd, hAccel, &msg))
     {
       TranslateMessage(&msg);
@@ -1045,7 +1034,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       {
         //MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
 
-        if (Mode_NoDialoge == false)/*pf_append*/
+        if (Mode_NoDialog == false)/*pf_append*/
           MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
       }
       else if (IsWindowEnabled(hTrack))
@@ -1100,7 +1089,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       {
         //MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
 
-        if (Mode_NoDialoge == false)/*pf_append*/
+        if (Mode_NoDialog == false)/*pf_append*/
           MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
 
         if (ExitOnEnd)
@@ -1143,8 +1132,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-          // if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))	         /*pf_append*/
-          if (D2VFile = fopen(szBuffer, "r"))
+          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))	         /*pf_append*/
+            //if (D2VFile = fopen(szBuffer, "r"))
           {
             char line[255];
 
@@ -1242,7 +1231,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         fgets(line, 2048, D2VFile);
         if (strncmp(line, "DGIndexProjectFile", 18) != 0)
         {
-          if (Mode_NoDialoge == false)/*pf_append*/
+          if (Mode_NoDialog == false)/*pf_append*/
             MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
 
           //MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
@@ -2912,6 +2901,20 @@ static void OpenVideoFile(HWND hVideoListDlg)
 
 void ThreadKill(int mode)
 {
+
+  /*pf_append*/
+  /*
+  #define MISC_KILL 0
+  #define END_OF_DATA_KILL 1
+  */
+  char log[256] = "";
+  sprintf(log, "%s ThreadKill:  mode = %d  \n", log, mode);
+  sprintf(log, "%s                        :    ", log);
+  sprintf(log, "%s( MISC_KILL = 0 , END_OF_DATA_KILL = 1  )", log);
+  Logging_ts(log);
+
+
+
   int i;
   double film_percent;
 
@@ -3047,12 +3050,12 @@ void ThreadKill(int mode)
     if (D2V_Flag == false && GetExtraData_fromStdin)
     {
       char log[256] = "";
-      sprintf(log, "%s StdinHeadBuff is too small          \n", log);
-      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f \n", log, StdinHeadFile_Size_CmdLine);
-      sprintf(log, "%s   StdinHeadFile_Size      = %d      \n", log, StdinHeadFile_Size);
-      sprintf(log, "%s   fpos_tracker            = %I64d   \n", log, fpos_tracker);
+      sprintf(log, "%s StdinHeadBuff is too small          ", log);
+      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f ", log, StdinHeadFile_Size_CmdLine);
+      sprintf(log, "%s   StdinHeadFile_Size      = %d      ", log, StdinHeadFile_Size);
+      sprintf(log, "%s   fpos_tracker            = %I64d   ", log, fpos_tracker);
       Logging_ts(log);
-      exit(0);
+      exit(1);
     }
 
 
@@ -3062,6 +3065,7 @@ void ThreadKill(int mode)
       _close(fdStdinHeadFile);
       remove(StdinHeadFile_Path);
     }
+
     /*pf_end_append*/
     //==========================================================================
 
