@@ -2,8 +2,16 @@
 
 
 //
+//デバッグ用  引数
+// 
+//  -i "E:\n3s.ts" -o "E:\n3s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
+//
+//
+
+
+//
 //パイプ処理の初期化
-//parse_cliを処理した直後に実行する。
+//parse_cliを処理した直後に実行すること。
 //
 int Initialize_pf()
 {
@@ -11,7 +19,8 @@ int Initialize_pf()
   IsClosed_stdin = true;
   GetExtraData_fromStdin = false;
 
-  if (Mode_Stdin && Initialize_stdin() == 1)
+  if (Mode_Stdin &&
+    Initialize_stdin() == 1)
   {
     //エラー
     remove(StdinHeadFile_Path);
@@ -21,15 +30,22 @@ int Initialize_pf()
   timeFlushD2VFile = time(NULL);
   tickReadSize_speedlimit = 0;
   tickBeginTime_speedlimit = system_clock::now();
-  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;
+  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    // Byte/sec  <--  MiB/sec
 
-  //デバッグ
-  Enable_pfLog = false;    //　true  false
 
-  pf_gop_Log[0] = '\0';
+  //デバッグ用のログ
+  {
+    Enable_pfLog = false;    //　true  false
 
-  min_gop_idx = INT32_MAX;
-  max_gop_idx = INT32_MIN;
+#ifdef _DEBUG
+    Enable_pfLog = true;
+    Logger_Initilaize();
+
+    char log[256] = "";
+    sprintf(log, "%s Mode_NoDialog = %d", log, Mode_NoDialog);
+    Logging_ts(log);
+#endif
+  }
 
   return 0;
 }
@@ -42,7 +58,6 @@ int Initialize_stdin()
 {
   // -i "filepath"　-pipe 　同時に指定されたらプロセス終了。
   if (NumLoadedFiles != 1) return 1;
-  NumLoadedFiles = 0;
 
   //
   //Input
@@ -55,9 +70,9 @@ int Initialize_stdin()
   //  標準入力の先頭部をファイルに書き出す、
   //  ファイルにすることでseekに対応する。
   //size
-  double gt_10MB = StdinHeadFile_Size_CmdLine;
-  gt_10MB = (10 < gt_10MB) ? gt_10MB : 10;                 //greater than 10 MiB
-  StdinHeadFile_Size = (int)(gt_10MB * 1024 * 1024);
+  double filesize = StdinHeadFile_Size_CmdLine;
+  filesize = (10 < filesize) ? filesize : 10;              //greater than 10 MiB
+  StdinHeadFile_Size = (int)(filesize * 1024 * 1024);
 
   //buff
   char *stdinHeadBuff = new char[StdinHeadFile_Size];      //先頭部分保存用のバッファ
@@ -67,42 +82,31 @@ int Initialize_stdin()
   //Fill stdinHeadBuff
   //  標準入力からデータ取り出し
   //
-  int curBuffSize = 0;                       //読込済サイズ
-
-  IsClosed_stdin = true;                     //タイムアウト判定用
-  time_t timeReadPipe_begin = time(NULL);    //タイムアウト判定用
+  int curBuffSize = 0;                                     //読込済サイズ
 
   while (curBuffSize < StdinHeadFile_Size)
   {
-    int tickDemandSize = StdinHeadFile_Size - curBuffSize;     //要求サイズ
+    int tickDemandSize = StdinHeadFile_Size - curBuffSize; //要求サイズ
     int readsize = _read(fdStdin, stdinHeadBuff + curBuffSize, tickDemandSize);
 
-    if (readsize == -1)                                        //fail to connect
+    if (readsize == -1)                                    //fail to connect
     {
-      //標準入力からデータがくるまで待機、３００秒経過で終了
-      //一度接続を確認したらタイムアウトはしない
-      if (IsClosed_stdin && time(NULL) - timeReadPipe_begin < 300)
-      {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        continue;
-      }
-      else
-        return 1;					                                 //time out.
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      continue;
     }
     else if (readsize == 0)
       return 1;		                                         //end of stream. too small source.
 
     curBuffSize += readsize;
-    IsClosed_stdin = false;
   }
 
+  IsClosed_stdin = false;
   if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
 
-  StdinHeadFile_Size = curBuffSize;
 
 
   //
-  //windowsのtempフォルダにDGI_pf.tmpを作成し、先頭部をファイルに保存する。
+  //windowsのtempフォルダにDGI_pf_tmp_00000_1を作成し、ストリーム先頭部をファイルに保存する。
   //  fdで開くと終了時に削除できなかった。FILE*で書き込んで閉じる。
   //
 
@@ -110,8 +114,11 @@ int Initialize_stdin()
   //  file pointer
   FILE *pf_tmp;
 
-  //tmp name
-  StdinHeadFile_Path = _tempnam(NULL, "DGI_pf.tmp");
+  //tmp file name
+  DWORD pid = GetCurrentProcessId();
+  int rnd = rand() % (1000 * 1000);
+  std::string basename = "DGI_pf_tmp_" + std::to_string(pid) + std::to_string(rnd) + "_";
+  StdinHeadFile_Path = _tempnam(NULL, basename.c_str());
   if (StdinHeadFile_Path == NULL)
     return 1;
 
@@ -131,9 +138,9 @@ int Initialize_stdin()
   if (fdStdinHeadFile == -1)
     return 1;
 
-  strcpy(Infilename[NumLoadedFiles], StdinHeadFile_Path);          //d2vファイル３行目のファイル名
-  Infile[NumLoadedFiles] = fdStdinHeadFile;                        //入力ファイルをStdinStreamFileに
-  NumLoadedFiles = 1;
+  //InfileにStdinStreamFileをセット
+  strcpy(Infilename[0], StdinHeadFile_Path);
+  Infile[0] = fdStdinHeadFile;
 
   //release buff
   if (stdinHeadBuff != NULL)

@@ -164,57 +164,27 @@ void WriteD2VLine(int finish)
 
   for (m = 0; m < gop_entries_ndx; m++)
   {
-    /* pf_append */
-    int preCheck = (entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-
-
-    if (preCheck < 0x32 || 0xf3 < preCheck)
-    {
-      //デバッグ用  チェックだけ
-      sprintf(pf_gop_Log, "☆　precheck is out of range = %02x \n", preCheck);
-
-      if (10 < time(NULL) - timeFlushLog_gop)
-      {
-        Logging_pf(pf_gop_Log);
-        pf_gop_Log[0] = '\0';
-        timeFlushLog_gop = time(NULL);
-      }
-    }
-    min_gop_idx = (min_gop_idx < preCheck) ? min_gop_idx : preCheck;
-    max_gop_idx = (preCheck < max_gop_idx) ? max_gop_idx : preCheck;
-    int gop = entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6);
-    /*end pf_append */
-
     sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
     strcat(D2VLine, temp);
-
-
-    /*  pf_off  */
-    //sprintf(temp, " %02x", entries[m].trf | (entries[m].pct << 4) | (entries[m].pf << 6));
-    //strcat(D2VLine, temp);
   }
-
-  if (finish){
-    char log[128] = "";
-    sprintf(log, "min,max  = %02x , %02x \n", min_gop_idx, max_gop_idx);
-    Logging_ts(log);
-  }
-
-
-
-
-
 
   if (finish) strcat(D2VLine, " ff\n");
   else strcat(D2VLine, "\n");
   fprintf(D2VFile, "%s", D2VLine);
 
+
   /*pf_append*/
-  //４秒以上経過していたらファイルにフラッシュ
-  if (4 < time(NULL) - timeFlushD2VFile)
+  //６秒以上経過していたらファイルにフラッシュ
+  if (6 < time(NULL) - timeFlushD2VFile)
   {
     fflush(D2VFile);
     timeFlushD2VFile = time(NULL);
+  }
+
+  //pf_append
+  if (finish){
+    Logging_ts("finish");
+    Logging_ts("threadkill_msg = " + threadkill_msg);
   }
   /*pf_end_append*/
 
@@ -335,6 +305,9 @@ void Decode_Picture()
       {
         if (process.locate != LOCATE_RIP)
         {
+          //pf_append
+          threadkill_msg = "getpic.cpp 309";
+
           Write_Frame(backward_reference_frame, d2v_backward, 0);
           ThreadKill(MISC_KILL);
         }
@@ -355,6 +328,9 @@ void Decode_Picture()
       Frame_Number++;
     if (Info_Flag && process.locate == LOCATE_RIP && CLIPreview && Frame_Number >= 100)
     {
+      //pf_append
+      threadkill_msg = "getpic.cpp 332";
+
       CLIActive = 0;
       SendMessage(hWnd, CLI_PREVIEW_DONE_MESSAGE, 0, 0);
       ThreadKill(MISC_KILL);
@@ -362,10 +338,12 @@ void Decode_Picture()
   }
   __except (EXCEPTION_EXECUTE_HANDLER)
   {
+
     if (MessageBox(hWnd, "Caught an exception during decoding! Continue?", "Exception!", MB_YESNO | MB_ICONERROR) == IDYES)
       return;
     else
       ThreadKill(MISC_KILL);
+
   }
 }
 
