@@ -4,9 +4,7 @@
 //
 //デバッグ用  引数
 // 
-//  -i "E:\\_TSsamp\\ac2s.ts" -o "E:\\_TSsamp\\ac2s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog
-//
-//  -i "E:\TS Chap\マツコ&有吉の怒り新党  メ～テレ  12月16日23時15分.ts" -o "E:\TS Chap\マツコ&有吉の怒り新党  メ～テレ  12月16日23時15分.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
+//  -i "E:\n3s.ts" -o "E:\n3s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
 //
 //
 
@@ -34,14 +32,19 @@ int Initialize_pf()
   tickBeginTime_speedlimit = system_clock::now();
   SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    // Byte/sec  <--  MiB/sec
 
+
   //デバッグ用のログ
   {
     Enable_pfLog = false;    //　true  false
+
+#ifdef _DEBUG
+    Enable_pfLog = true;
     Logger_Initilaize();
 
     char log[256] = "";
     sprintf(log, "%s Mode_NoDialog = %d", log, Mode_NoDialog);
     Logging_ts(log);
+#endif
   }
 
   return 0;

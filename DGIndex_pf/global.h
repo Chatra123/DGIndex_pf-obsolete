@@ -397,7 +397,6 @@ XTN double SpeedLimit;                   //                    最大読込み速度 By
 
 
 
-
 //
 //ログ　　デバッグ用
 //

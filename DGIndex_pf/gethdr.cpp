@@ -143,9 +143,14 @@ int Get_Hdr(int mode)
   boolean HadSequenceHeader = false;
   boolean HadGopHeader = false;
 
+  //ドロップの多いファイルで無限ループになった。
+  // case 0x1be: でループしつづけないようにチェック。
+  int loop_counter_Get_Hdr = 0;  /*pf_append*/
+
   for (;;)
   {
     // Look for next_start_code.
+
     if (Stop_Flag == true)
       return 1;
     next_start_code();
@@ -153,8 +158,24 @@ int Get_Hdr(int mode)
     code = Show_Bits(32);
     switch (code)
     {
+      /*pf_off*/
+      //case 0x1be:
+      //  break;
+
+    /*pf_append*/
     case 0x1be:
+      loop_counter_Get_Hdr++;
+      if (loop_counter_Get_Hdr <= 40)
+      {
+        break;
+      }
+      else
+      {
+        Get_Bits(32);
+        break;
+      }
       break;
+
 
     case SEQUENCE_HEADER_CODE:
       // Index the location of the sequence header for the D2V file.
