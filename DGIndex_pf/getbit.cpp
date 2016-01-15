@@ -671,7 +671,7 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    const int pmtcheck_interval = (Mode_Stdin) ? 5000 : 500; /*pf_append*/
+    const int pmtcheck_interval = (Mode_Stdin) ? 3000 : 500; /*pf_append*/
 
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
