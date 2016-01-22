@@ -278,20 +278,20 @@ FILE *OpenAudio(char *path, char *mode, unsigned int id)
 }
 
 #define LOCATE \
-  while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
-  { \
+    while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
+      { \
 Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE); \
 if (Read < BUFFER_SIZE) Next_File();\
 Rdptr -= BUFFER_SIZE; \
-  }
+      }
 
 #define DECODE_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
 size = 0; \
-  while (Packet_Length > 0) \
-  { \
+    while (Packet_Length > 0) \
+      { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size); \
@@ -306,15 +306,15 @@ size = ac3_decode_data(Rdptr, Packet_Length, size); \
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-  } \
+      } \
 }
 
 #define DEMUX_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-  while (Packet_Length > 0) \
-  { \
+    while (Packet_Length > 0) \
+      { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -329,7 +329,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-  } \
+      } \
 }
 
 void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsigned char format)
@@ -412,8 +412,8 @@ void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsign
 do {\
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-  while (Packet_Length > 0) \
-  { \
+    while (Packet_Length > 0) \
+      { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));\
@@ -428,15 +428,15 @@ fwrite(Rdptr, Packet_Length, 1, (fp));\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-  } \
+      } \
 } while( 0 )
 
 #define DEMUX_DTS \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-  while (Packet_Length > 0) \
-  { \
+    while (Packet_Length > 0) \
+      { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -451,7 +451,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-  } \
+      } \
 }
 
 static char *FTType[5] = {
@@ -549,8 +549,8 @@ void Initialize_Buffer()
 #define SKIP_TRANSPORT_PACKET_BYTES(bytes_to_skip)\
 do {\
 int temp = (bytes_to_skip); \
-  while (temp> 0)\
-  { \
+    while (temp> 0)\
+      { \
 if (temp + Rdptr > BUFFER_SIZE + Rdbfr) \
 { \
 temp-= BUFFER_SIZE + Rdbfr - Rdptr; \
@@ -563,7 +563,7 @@ else\
 Rdptr += temp;\
 temp = 0; \
 } \
-  } \
+      } \
 Packet_Length -= (bytes_to_skip); \
 } while (0)
 
@@ -671,7 +671,7 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    //const int pmtcheck_interval = (Mode_Stdin) ? 2500 : 500; /*pf_append*/
+    const int pmtcheck_interval = (Mode_Stdin) ? 3000 : 500; /*pf_append*/
 
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
@@ -692,8 +692,8 @@ void Next_Transport_Packet()
         NULL, MB_OK | MB_ICONERROR);
       ThreadKill(MISC_KILL);
     }
-    //else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > pmtcheck_interval)  /*pf_append*/
-    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > 500)   
+    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > pmtcheck_interval)  /*pf_append*/
+      //else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > 500)   
     {
       {
         char log[256] = "";
