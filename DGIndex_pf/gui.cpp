@@ -3050,14 +3050,16 @@ void ThreadKill(int mode)
     if (D2V_Flag == false && GetExtraData_fromStdin)
     {
       char log[256] = "";
-      sprintf(log, "%s StdinHeadBuff is too small          ", log);
-      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f ", log, StdinHeadFile_Size_CmdLine);
-      sprintf(log, "%s   StdinHeadFile_Size      = %d      ", log, StdinHeadFile_Size);
-      sprintf(log, "%s   fpos_tracker            = %I64d   ", log, fpos_tracker);
+      sprintf(log, "%s StdinHeadBuff is too small           \n", log);
+      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f  \n", log, StdinHeadFile_Size_CmdLine);
+      sprintf(log, "%s   StdinHeadFile_Size      = %d       \n", log, StdinHeadFile_Size);
+      sprintf(log, "%s   fpos_tracker            = %I64d    \n", log, fpos_tracker);
       Logging_ts(log);
+
+      _close(fdStdinHeadFile);
+      remove(StdinHeadFile_Path);
       exit(1);
     }
-
 
     //一時ファイル削除、２回目のThreadKill(int)で削除
     if (D2V_Flag && Mode_Stdin)

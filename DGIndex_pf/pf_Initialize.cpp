@@ -5,7 +5,7 @@
 //デバッグ用  引数
 // 
 //  -i "E:\n3s.ts" -o "E:\n3s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
-//
+//  -i "E:\TS_Samp\scramble_180s.ts" -o "E:\TS_Samp\scramble_180s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
 //
 
 
@@ -71,7 +71,7 @@ int Initialize_stdin()
   //  ファイルにすることでseekに対応する。
   //size
   double filesize = StdinHeadFile_Size_CmdLine;
-  filesize = (10 < filesize) ? filesize : 10;              //greater than 10 MiB
+  filesize = (6 < filesize) ? filesize : 6;              //greater than 6 MiB
   StdinHeadFile_Size = (int)(filesize * 1024 * 1024);
 
   //buff
@@ -106,7 +106,7 @@ int Initialize_stdin()
 
 
   //
-  //windowsのtempフォルダにDGI_pf_tmp_00000_1を作成し、ストリーム先頭部をファイルに保存する。
+  //windowsのtempフォルダにDGI_pf_tmp_00000_2を作成し、ストリーム先頭部をファイルに保存する。
   //  fdで開くと終了時に削除できなかった。FILE*で書き込んで閉じる。
   //
 
