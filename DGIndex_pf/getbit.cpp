@@ -75,7 +75,7 @@ int _donread(int fd, void *buffer, unsigned int count)
     Limit_ReadSpeed(bytes);
   }
 
-  fpos_tracker += bytes; //d2vに書き込むファイル位置はfpos_trackerを元に計算する
+  fpos_tracker += bytes; //d2vに書き込むフレーム位置はfpos_trackerを元に計算する
 
   //log
   if (bytes < BUFFER_SIZE)

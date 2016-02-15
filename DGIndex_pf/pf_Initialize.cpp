@@ -79,7 +79,6 @@ int Initialize_stdin()
   memset(stdinHeadBuff, '\0', StdinHeadFile_Size);
 
   //
-  //Fill stdinHeadBuff
   //  標準入力からデータ取り出し
   //
   int curBuffSize = 0;                                     //読込済サイズ
@@ -91,7 +90,7 @@ int Initialize_stdin()
 
     if (readsize == -1)                                    //fail to connect
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
       continue;
     }
     else if (readsize == 0)
@@ -107,12 +106,8 @@ int Initialize_stdin()
 
   //
   //windowsのtempフォルダにDGI_pf_tmp_00000_2を作成し、ストリーム先頭部をファイルに保存する。
-  //  fdで開くと終了時に削除できなかった。FILE*で書き込んで閉じる。
-  //
-
-  //書込
-  //  file pointer
-  FILE *pf_tmp;
+  //  fdで書くと終了時に削除できなかった。FILE*で書いて閉じる。fdで読み込む。
+  FILE *tmpfile;
 
   //tmp file name
   DWORD pid = GetCurrentProcessId();
@@ -122,17 +117,23 @@ int Initialize_stdin()
   if (StdinHeadFile_Path == NULL)
     return 1;
 
-  pf_tmp = fopen(StdinHeadFile_Path, "wb");
-  if (pf_tmp == NULL)
+  tmpfile = fopen(StdinHeadFile_Path, "wb");
+  if (tmpfile == NULL)
     return 1;
 
-  //write data
-  size_t canwrite = fwrite(stdinHeadBuff, StdinHeadFile_Size, 1, pf_tmp);
+  //write stdinHeadBuff
+  size_t canwrite = fwrite(stdinHeadBuff, StdinHeadFile_Size, 1, tmpfile);
   if (canwrite == 0)
     return 1;
-  fclose(pf_tmp);
+  fclose(tmpfile);
 
-  //読込
+  //release buff
+  if (stdinHeadBuff != NULL)
+  {
+    delete[] stdinHeadBuff;
+    stdinHeadBuff = NULL;
+  }
+
   //  file descriptorで再オープン
   fdStdinHeadFile = _open(StdinHeadFile_Path, _O_RDONLY | _O_BINARY);
   if (fdStdinHeadFile == -1)
@@ -141,13 +142,6 @@ int Initialize_stdin()
   //InfileにStdinStreamFileをセット
   strcpy(Infilename[0], StdinHeadFile_Path);
   Infile[0] = fdStdinHeadFile;
-
-  //release buff
-  if (stdinHeadBuff != NULL)
-  {
-    delete[] stdinHeadBuff;
-    stdinHeadBuff = NULL;
-  }
 
   return 0;
 }
