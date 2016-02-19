@@ -1,13 +1,10 @@
 #include "global.h"
-
-
 //
 //デバッグ用  引数
 // 
-//  -i "E:\n3s.ts" -o "E:\n3s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
+//  -i "E:\TS_Samp\n20s.ts" -o "E:\TS_Samp\n20s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
 //  -i "E:\TS_Samp\scramble_180s.ts" -o "E:\TS_Samp\scramble_180s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
 //
-
 
 //
 //パイプ処理の初期化
@@ -30,20 +27,14 @@ int Initialize_pf()
   timeFlushD2VFile = time(NULL);
   tickReadSize_speedlimit = 0;
   tickBeginTime_speedlimit = system_clock::now();
-  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    // Byte/sec  <--  MiB/sec
-
+  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    //Byte/sec --> MiB/sec
 
   //デバッグ用のログ
   {
-    Enable_pfLog = false;    //　true  false
-
+    Enable_pfLog = false;
 #ifdef _DEBUG
-    Enable_pfLog = true;
+    Enable_pfLog = true;//  true  false
     Logger_Initilaize();
-
-    char log[256] = "";
-    sprintf(log, "%s Mode_NoDialog = %d", log, Mode_NoDialog);
-    Logging_ts(log);
 #endif
   }
 
@@ -69,9 +60,9 @@ int Initialize_stdin()
   //StdinHeadFile
   //  標準入力の先頭部をファイルに書き出す、
   //  ファイルにすることでseekに対応する。
-  //size
+  //set size
   double filesize = StdinHeadFile_Size_CmdLine;
-  filesize = (6 < filesize) ? filesize : 6;              //greater than 6 MiB
+  filesize = (6 < filesize) ? filesize : 6;                //greater than 6 MiB
   StdinHeadFile_Size = (int)(filesize * 1024 * 1024);
 
   //buff
@@ -85,8 +76,8 @@ int Initialize_stdin()
 
   while (curBuffSize < StdinHeadFile_Size)
   {
-    int tickDemandSize = StdinHeadFile_Size - curBuffSize; //要求サイズ
-    int readsize = _read(fdStdin, stdinHeadBuff + curBuffSize, tickDemandSize);
+    int requestSize = StdinHeadFile_Size - curBuffSize;    //要求サイズ
+    int readsize = _read(fdStdin, stdinHeadBuff + curBuffSize, requestSize);
 
     if (readsize == -1)                                    //fail to connect
     {
@@ -98,7 +89,6 @@ int Initialize_stdin()
 
     curBuffSize += readsize;
   }
-
   IsClosed_stdin = false;
   if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
 
@@ -106,7 +96,7 @@ int Initialize_stdin()
 
   //
   //windowsのtempフォルダにDGI_pf_tmp_00000_2を作成し、ストリーム先頭部をファイルに保存する。
-  //  fdで書くと終了時に削除できなかった。FILE*で書いて閉じる。fdで読み込む。
+  //  fdで書くと終了時に削除できなかった。FILE*で書いて閉じてから、fdで読み込む。
   FILE *tmpfile;
 
   //tmp file name
@@ -121,13 +111,13 @@ int Initialize_stdin()
   if (tmpfile == NULL)
     return 1;
 
-  //write stdinHeadBuff
+  //write
   size_t canwrite = fwrite(stdinHeadBuff, StdinHeadFile_Size, 1, tmpfile);
   if (canwrite == 0)
     return 1;
   fclose(tmpfile);
 
-  //release buff
+  //release
   if (stdinHeadBuff != NULL)
   {
     delete[] stdinHeadBuff;
@@ -139,7 +129,7 @@ int Initialize_stdin()
   if (fdStdinHeadFile == -1)
     return 1;
 
-  //InfileにStdinStreamFileをセット
+  //Infileにセット
   strcpy(Infilename[0], StdinHeadFile_Path);
   Infile[0] = fdStdinHeadFile;
 

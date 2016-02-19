@@ -49,6 +49,7 @@
 #include <mutex>
 #include <thread>
 #include <string>
+#include <sstream>
 /*pf_end_append*/
 
 #ifdef GLOBAL
@@ -146,12 +147,8 @@ XTN bool bIsWindowsXPorLater;
 #define CHROMA422       2
 #define CHROMA444       3
 
-#define SECTOR_SIZE             2048     //  /*pf_append_off*/
-
-
-//#define BUFFER_SIZE         1024000      // 1024 KB   /*pf_append*/
+#define SECTOR_SIZE            2048 
 #define BUFFER_SIZE          512000        //  512 KB   /*pf_append*/
-//#define BUFFER_SIZE          204800      //  204 KB   /*pf_append*/
 //#define BUFFER_SIZE            2048      //  /*pf_append_off*/
 
 #define MAX_FILE_NUMBER         512

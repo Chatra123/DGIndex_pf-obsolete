@@ -77,18 +77,6 @@ int _donread(int fd, void *buffer, unsigned int count)
 
   fpos_tracker += bytes; //d2vに書き込むフレーム位置はfpos_trackerを元に計算する
 
-  //log
-  if (bytes < BUFFER_SIZE)
-  {
-    char log[256] = "";
-    sprintf(log, "%s last bytes = %d\n", log, bytes);
-    sprintf(log, "%s fpos_tracker = %I64d ", log, fpos_tracker);
-    Logging_ts(log);
-    Logging_ts("finish read ");
-  }
-
-
-
   return bytes;
 }
 
@@ -106,30 +94,17 @@ int read_stdin(void *buffer, const int demandSize)
     int tickReadSize = demandSize - read_sum;
 
     int readsize = _read(fdStdin, tmpbuff, tickReadSize);
-    if (readsize == -1)
+    if (readsize == -1 )
     {
       // If fd is invalid
       // If execution is allowed to continue, the function returns -1 and sets errno to EBADF.
       IsClosed_stdin = true;
-
-      //log
-      char log[256] = "";
-      sprintf(log, "%s pipe read error☆☆☆\n", log);
-      sprintf(log, "%s readsize == -1 ", log);
-      Logging_pf(log);
-
-      return 0;
+      return 0; //エラー終了
     }
     else if (readsize == 0)
     {
       IsClosed_stdin = true;
-
-      //log
-      char log[256] = "";
-      sprintf(log, "%s pipe disconnect", log);
-      Logging_ts(log);
-
-      break; //パイプ終端、接続切断
+      break; //パイプ終端、正常終了
     }
 
     memcpy((char*)buffer + read_sum, tmpbuff, readsize);
@@ -671,7 +646,7 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    const int pmtcheck_interval = (Mode_Stdin) ? 3000 : 500; /*pf_append*/
+    const unsigned int pmtcheck_interval = (Mode_Stdin) ? 3000 : 500; /*pf_append*/
 
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
@@ -696,12 +671,12 @@ void Next_Transport_Packet()
       //else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > 500)   
     {
       {
-        char log[256] = "";
-        sprintf(log, "%s InitializePMTCheckItems()", log);
-        sprintf(log, "%s time - start = %d", log, (time - start));
-        Logging_ts(log);
+        std::ostringstream log;
+        log << "InitializePMTCheckItems()" << std::endl;
+        log << "                            ";
+        log << "  time - start = " << (time - start) << std::endl;
+        Logging_ts(log.str());
       }
-
       pat_parser.InitializePMTCheckItems();
       pmt_check = true;
     }
@@ -717,11 +692,11 @@ void Next_Transport_Packet()
     if (Stop_Flag)
     {
       {
-        threadkill_msg = "Search for a sync byte. ";
-        char log[256] = "";
-        sprintf(log, "%s ThreadKill(MISC_KILL);\n", log);
-        sprintf(log, "%sSearch for a sync byte. Gives some protection against emulation. ", log);
-        Logging_ts(log);
+        std::ostringstream log;
+        log << "ThreadKill(MISC_KILL);" << std::endl;
+        log << "                            ";
+        log << "  Search for a sync byte. Gives some protection against emulation." << std::endl;
+        Logging_ts(log.str());
       }
 
       ThreadKill(MISC_KILL);
@@ -1703,7 +1678,7 @@ void Next_PVA_Packet()
     /*pf_end_off*/
 
     /*pf_append*/
-    start = timeGetTime();
+    time = timeGetTime();
     if (time - start > 2000)
     {
       Logging_ts("Cannot find video data.");

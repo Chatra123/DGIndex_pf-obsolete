@@ -105,7 +105,7 @@ void Logging_ts(string msg)
 
   if (log)
   {
-    log << Get_TimeCode() << " :   " << msg.c_str() << endl;
+    log << Get_TimeCode() << " :   " << msg.c_str();
     log.close();
   }
 }

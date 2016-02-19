@@ -35,10 +35,8 @@ extern void StartVideoDemux(void);
 DWORD WINAPI MPEG2Dec(LPVOID n)
 {
   /* pf_append */
-  char log[256] = "";
-  sprintf(log, "MPEG2Dec  = %02d", process.locate);
-  Logging_ts(log);
   /*
+  MPEG2Dec parameter list
   #define LOCATE_INIT         0
   #define LOCATE_FORWARD      1
   #define LOCATE_BACKWARD     -1
@@ -47,10 +45,11 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
   #define LOCATE_PLAY         4
   #define LOCATE_DEMUX_AUDIO  5
   */
-
-
-
-
+  {
+    std::ostringstream log;
+    log << "MPEG2Dec  = " << process.locate << std::endl;
+    Logging_ts(log.str());
+  }
 
 
 

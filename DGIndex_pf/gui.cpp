@@ -2901,18 +2901,14 @@ static void OpenVideoFile(HWND hVideoListDlg)
 
 void ThreadKill(int mode)
 {
-
   /*pf_append*/
-  /*
-  #define MISC_KILL 0
-  #define END_OF_DATA_KILL 1
-  */
-  char log[256] = "";
-  sprintf(log, "%s ThreadKill:  mode = %d  \n", log, mode);
-  sprintf(log, "%s                        :    ", log);
-  sprintf(log, "%s( MISC_KILL = 0 , END_OF_DATA_KILL = 1  )", log);
-  Logging_ts(log);
-
+  {
+    std::ostringstream log;
+    log << "ThreadKill:  mode = " << mode <<std::endl;
+    log << "                            ";
+    log << "  ( MISC_KILL = 0 , END_OF_DATA_KILL = 1 )" << std::endl;
+    Logging_ts(log.str());
+  }
 
 
   int i;
@@ -3049,17 +3045,20 @@ void ThreadKill(int mode)
     //
     if (D2V_Flag == false && GetExtraData_fromStdin)
     {
-      char log[256] = "";
-      sprintf(log, "%s StdinHeadBuff is too small           \n", log);
-      sprintf(log, "%s   StdinHeadFile_Size_CmdLine = %.0f  \n", log, StdinHeadFile_Size_CmdLine);
-      sprintf(log, "%s   StdinHeadFile_Size      = %d       \n", log, StdinHeadFile_Size);
-      sprintf(log, "%s   fpos_tracker            = %I64d    \n", log, fpos_tracker);
-      Logging_ts(log);
-
+      std::ostringstream log;
+      log << "StdinHeadBuff is too small" << std::endl;
+      log << "                            ";
+      log << "  StdinHeadFile_Size_CmdLine = " << StdinHeadFile_Size_CmdLine << std::endl;
+      log << "                            ";
+      log << "  StdinHeadFile_Size         = " << StdinHeadFile_Size << std::endl;
+      log << "                            ";
+      log << "  fpos_tracker               = " << fpos_tracker << std::endl;
+      Logging_ts(log.str());
       _close(fdStdinHeadFile);
       remove(StdinHeadFile_Path);
       exit(1);
     }
+
 
     //一時ファイル削除、２回目のThreadKill(int)で削除
     if (D2V_Flag && Mode_Stdin)
