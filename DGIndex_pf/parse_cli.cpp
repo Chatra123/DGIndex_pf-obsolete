@@ -31,10 +31,11 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
     /*pf_append*/
     Mode_Stdin = false;
-    StdinStreamFileSize_byArg = 0;
-    ReadSpeedLimit_byArg = 0;
-    Mode_NoDialoge = false;
+    StdinHeadFile_Size_CmdLine = 0;
+    SpeedLimit_CmdLine = 0;
+    Mode_NoDialog = false;
     Mode_UseBad = false;
+    /*pf_end_append*/
 
     while (1)
     {
@@ -100,7 +101,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
         //==========================================================================
         /*  pf_append  */
-        if (!strncmp(opt, "pipe", 4))
+        if (!strncmp(opt, "pipe", 5))
         {
           Mode_Stdin = true;
           while (*p == ' ' || *p == '\t') p++;   //文字が見つかるまで空白スキップ
@@ -151,17 +152,17 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           //Recovery()の後でNumLoadedFiles++
           NumLoadedFiles++;
         }
-        else if (!strncmp(opt, "usebad", 6))
+        else if (!strncmp(opt, "usebad", 7))
         {
           Mode_UseBad = true;
         }
-        else if (!strncmp(opt, "nodialog", 8))
+        else if (!strncmp(opt, "nodialog", 9))
         {
-          Mode_NoDialoge = true;
+          Mode_NoDialog = true;
         }
-        else if (!strncmp(opt, "streambuff", 7))
+        else if (!strncmp(opt, "streamheadfile", 15))
         {
-          //StdinStreamFileSize_byArg
+          //StdinHeadFile_Size_CmdLine
           char *param, paramText[32];
           memset(paramText, '\0', 32);
           param = paramText;
@@ -182,17 +183,17 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
           if (sscanf_s(paramText, "%lf", &buffsize) <= 0)
             buffsize = 0;
-          StdinStreamFileSize_byArg = buffsize;
+          StdinHeadFile_Size_CmdLine = buffsize;
         }
-        else if (!strncmp(opt, "limit", 5))
+        else if (!strncmp(opt, "limit", 6))
         {
-          //ファイル速度上限
-
+          //ファイル読込速度
           char *param, paramText[32];
           memset(paramText, '\0', 32);
           param = paramText;
 
           while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
+
           while (1)
           {
             if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端なら終了
@@ -207,7 +208,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
           if (sscanf_s(paramText, "%lf", &limit_MiB) <= 0)
             limit_MiB = 0;
-          ReadSpeedLimit_byArg = limit_MiB * 1024 * 1024;
+          SpeedLimit_CmdLine = limit_MiB;
         }
         /*pf_end_append*/
         //==========================================================================
@@ -1402,114 +1403,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
     }
   }
 
-  //*pf_append*/
-  //initialize
-  IsClosed_stdin = true;
-  HasExtraData_fromStdin = false;
-  Flg_Exist_morebuffLog = false;
-
-  if (Mode_Stdin && Initialize_stdin() == 1)
-  {
-    //エラー
-    remove(StdinStreamFile_Path);
-    return 1;                            //プロセス終了
-  }
-
-  timeFlushD2VFile = time(NULL);
-  tickReadSize_speedlimit = 0;
-  tickBeginTime_speedlimit = system_clock::now();
-  /*pf_end_append*/
 
   return 0;
 }
 
-//==========================================================================
-//*pf_append*/
-int Initialize_stdin()
-{
-  // -i "filepath"　-pipe 　同時に指定されたらプロセス終了。
-  if (NumLoadedFiles != 1) return 1;
-  NumLoadedFiles = 0;
-
-  //
-  //Input
-  //
-  //  ver. file descriptor    read stdin
-  _setmode(_fileno(stdin), _O_BINARY);
-  fdStdin = _fileno(stdin);
-
-
-  //StdinStreamFile
-  //size
-  double buffsize_MB = StdinStreamFileSize_byArg;
-  buffsize_MB = (10 < buffsize_MB) ? buffsize_MB : 10;        //greater than 10 MiB
-  StdinStreamFile_Size = (int)(buffsize_MB * 1024 * 1024);
-
-  //buff
-  char *strmFileBuff = new char[StdinStreamFile_Size];         //一時ファイル作成用のバッファ
-  memset(strmFileBuff, '\0', StdinStreamFile_Size);
-
-  //
-  //Fill strmFileBuff
-  //
-  //  file descriptor    read stdin
-  IsClosed_stdin = true;
-  time_t timeReadPipe_begin = time(NULL);
-  int curBuffSize = 0;
-
-  while (curBuffSize < StdinStreamFile_Size)
-  {
-    int tickDemandSize = StdinStreamFile_Size - curBuffSize;  //要求サイズ
-    int readsize = _read(fdStdin, strmFileBuff + curBuffSize, tickDemandSize);
-
-    if (readsize == -1)                                    //fail to connect
-    {
-      //標準入力がリダイレクトされるまで待機、３００秒で終了
-      //一度接続を確認したらタイムアウトはしない
-      if (IsClosed_stdin && time(NULL) - timeReadPipe_begin < 300)
-      {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        continue;
-      }
-      else
-        return 1;					                                 //time out.
-    }
-    else if (readsize == 0)
-      return 1;		                                         //end of stream. too small source.
-
-    curBuffSize += readsize;
-    IsClosed_stdin = false;
-  }
-
-  if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
-  StdinStreamFile_Size = curBuffSize;
-
-
-  //
-  //Write StdinStreamFile
-  //
-  // fdで開くと終了時に削除できなかった。FILE*で開く。
-  //  file pointer    StdinStreamFile
-  FILE * writefp;
-  if ((StdinStreamFile_Path = _tempnam(NULL, "DGI_pf.tmp")) == NULL) return 1;    //create file name
-  if ((writefp = fopen(StdinStreamFile_Path, "wb")) == NULL) return 1;            //open
-  if (fwrite(strmFileBuff, StdinStreamFile_Size, 1, writefp) == 0) return 1;      //write
-  fclose(writefp);                                                                //close
-
-  // reopen StdinStreamFile
-  if ((fdStdinStreamFile = _open(StdinStreamFile_Path, _O_RDONLY | _O_BINARY)) == -1) return 1; //open
-  strcpy(Infilename[NumLoadedFiles], StdinStreamFile_Path);                       //d2vファイル３行目のファイル名
-  Infile[NumLoadedFiles] = fdStdinStreamFile;                                     //入力ファイルをStdinStreamFileに
-  NumLoadedFiles = 1;
-
-  // release strmFileBuff
-  if (strmFileBuff != NULL)
-  {
-    delete[] strmFileBuff;
-    strmFileBuff = NULL;
-  }
-
-  return 0;
-}
-/*pf_end_append*/
-//==========================================================================

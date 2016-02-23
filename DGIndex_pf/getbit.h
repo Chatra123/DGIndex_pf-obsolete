@@ -78,6 +78,13 @@ __forceinline static unsigned int Get_Byte()
 
   if (Rdptr >= buffer_invalid)
   {
+    //*pf_append*/
+    {
+      std::ostringstream log;
+      log << "ThreadKill   END_OF_DATA_KILL   Rdptr >= buffer_invalid" << std::endl;
+      Logging_ts(log.str());
+    }
+
     // Ran out of good data.
     if (LoopPlayback)
       ThreadKill(END_OF_DATA_KILL);
