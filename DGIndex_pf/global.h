@@ -344,7 +344,7 @@ using namespace std::chrono;
 //
 //Mode
 //
-XTN bool Mode_Stdin;                     //read from stdin or file
+XTN bool Mode_PipeInput;                 //read from stdin or file
 XTN bool Mode_UseBad;                    //Ignore field order transition
 XTN bool Mode_NoDialog;                  //suspend some dialog
 

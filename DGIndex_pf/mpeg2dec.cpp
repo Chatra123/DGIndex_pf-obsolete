@@ -381,7 +381,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       if (FullPathInFiles)
       {
-        if (Mode_Stdin == false)
+        if (Mode_PipeInput == false)
           fprintf(D2VFile, "%s\n", Infilename[NumLoadedFiles - i]);
         else
           fprintf(D2VFile, "%s\n", Stdin_SourcePath);

@@ -16,7 +16,7 @@ int Initialize_pf()
   IsClosed_stdin = true;
   GetExtraData_fromStdin = false;
 
-  if (Mode_Stdin &&
+  if (Mode_PipeInput &&
     Initialize_stdin() == 1)
   {
     //ÉGÉâÅ[

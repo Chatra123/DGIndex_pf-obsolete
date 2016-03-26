@@ -2978,7 +2978,7 @@ void ThreadKill(int mode)
     //==========================================================================
     /*pf_append*/
     //ファイル終端が確定したので書き換え
-    if (D2V_Flag && Mode_Stdin)
+    if (D2V_Flag && Mode_PipeInput)
     {
       //再オープン
       fclose(D2VFile);
@@ -3061,7 +3061,7 @@ void ThreadKill(int mode)
 
 
     //一時ファイル削除、２回目のThreadKill(int)で削除
-    if (D2V_Flag && Mode_Stdin)
+    if (D2V_Flag && Mode_PipeInput)
     {
       _close(fdStdinHeadFile);
       remove(StdinHeadFile_Path);
@@ -4628,7 +4628,7 @@ void UpdateWindowText(int mode)
     sprintf(szBuffer, "%d:%02d:%02d", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60);
     SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
 
-    if (Mode_Stdin) remain = 0;
+    if (Mode_PipeInput) remain = 0;
     sprintf(szBuffer, "%d:%02d:%02d", remain / 3600, (remain % 3600) / 60, remain % 60);
     SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
 

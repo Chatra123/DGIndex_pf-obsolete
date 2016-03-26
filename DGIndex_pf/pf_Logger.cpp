@@ -14,7 +14,7 @@ void Logger_Initilaize()
   //É\Å[ÉXñº
   char* srcname = NULL;
   {
-    if (Mode_Stdin)
+    if (Mode_PipeInput)
       srcname = Stdin_SourcePath;
     else if (0 < NumLoadedFiles)
       srcname = Infilename[NumLoadedFiles - 1];
