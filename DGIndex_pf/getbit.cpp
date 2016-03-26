@@ -51,7 +51,7 @@ int _donread(int fd, void *buffer, unsigned int count)
   unsigned int bytes = 0;
 
   //標準入力
-  if (Mode_Stdin)
+  if (Mode_PipeInput)
   {
     if (!_eof(fd))
     {
@@ -646,7 +646,7 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    const unsigned int pmtcheck_interval = (Mode_Stdin) ? 3000 : 500; /*pf_append*/
+    const unsigned int pmtcheck_interval = (Mode_PipeInput) ? 3000 : 500; /*pf_append*/
 
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
@@ -725,7 +725,7 @@ void Next_Transport_Packet()
     if (D2V_Flag)
     {
       /*pf_append*/
-      if (Mode_Stdin)
+      if (Mode_PipeInput)
       {
         //D2Vファイル内のバイト位置はPackHeaderPositionを元に計算する
         PackHeaderPosition = fpos_tracker
@@ -1982,7 +1982,7 @@ void Next_Packet()
       if (D2V_Flag)
       {
         /*pf_append*/
-        if (Mode_Stdin)
+        if (Mode_PipeInput)
         {
           PackHeaderPosition = fpos_tracker;
           PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
@@ -3172,7 +3172,7 @@ void UpdateInfo()
     processed *= TRACK_PITCH;
 
     //processed /= Infiletotal; /*pf_off*/
-    if (Mode_Stdin) processed = -1; /*pf_append*/
+    if (Mode_PipeInput) processed = -1; /*pf_append*/
     else processed /= Infiletotal;/*pf_append*/
 
     trackpos = (int)processed;

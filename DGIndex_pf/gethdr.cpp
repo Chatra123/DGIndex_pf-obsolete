@@ -494,7 +494,7 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
     //}
 
     //pf_append
-    if (Mode_Stdin)
+    if (Mode_PipeInput)
     {
       if (IsClosed_stdin)
       {

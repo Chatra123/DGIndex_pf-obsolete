@@ -30,7 +30,7 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
     hadRGoption = 0;
 
     /*pf_append*/
-    Mode_Stdin = false;
+    Mode_PipeInput = false;
     StdinHeadFile_Size_CmdLine = 0;
     SpeedLimit_CmdLine = 0;
     Mode_NoDialog = false;
@@ -101,9 +101,9 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
 
         //==========================================================================
         /*  pf_append  */
-        if (!strncmp(opt, "pipe", 5))
+        if (!_stricmp(opt, "pipe"))
         {
-          Mode_Stdin = true;
+          Mode_PipeInput = true;
           while (*p == ' ' || *p == '\t') p++;   //文字が見つかるまで空白スキップ
           f = name;
 
@@ -152,15 +152,15 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           //Recovery()の後でNumLoadedFiles++
           NumLoadedFiles++;
         }
-        else if (!strncmp(opt, "usebad", 7))
+        else if (!_stricmp(opt, "usebad"))
         {
           Mode_UseBad = true;
         }
-        else if (!strncmp(opt, "nodialog", 9))
+        else if (!_stricmp(opt, "nodialog"))
         {
           Mode_NoDialog = true;
         }
-        else if (!strncmp(opt, "streamheadfile", 15))
+        else if (!_stricmp(opt, "streamheadfile"))
         {
           //StdinHeadFile_Size_CmdLine
           char *param, paramText[32];
@@ -185,11 +185,11 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
             buffsize = 0;
           StdinHeadFile_Size_CmdLine = buffsize;
         }
-        else if (!strncmp(opt, "limit", 6))
+        else if (!_stricmp(opt, "limit"))
         {
           //ファイル読込速度
-          char *param, paramText[32];
-          memset(paramText, '\0', 32);
+          char *param, paramText[64];
+          memset(paramText, '\0', 64);
           param = paramText;
 
           while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
