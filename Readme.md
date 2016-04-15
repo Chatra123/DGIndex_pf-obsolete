@@ -37,6 +37,7 @@ DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
 
     -usebad
 .d2vを.d2v.badに変更しない。  
+処理終了後に.d2v.badにリネームせず、.d2vのままにします。  
 プロセス終了後に.d2v.badが作成されない場合は必要ありません。  
 .d2v.badについてはDGIndexのヘルプを見てください。  
 
@@ -70,7 +71,7 @@ DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
 のように-oの前の半角スペースは１つにする。  
 半角スペースが２つ以上かつ、"C:\video.ts"が存在している場合は起動したあとに処理が開始しない。  
 -i "C:\video.ts"  -o "C:\video.ts.d2v"  
-のように"C:\video.ts.d2v"がまだ作成されていないファイルパスなら問題はありません。
+のように"C:\video.ts.d2v"がまだ作成前のファイルパスなら問題はありません。
 
 
 
