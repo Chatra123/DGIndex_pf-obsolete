@@ -71,7 +71,7 @@ DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
 のように-oの前の半角スペースは１つにする。  
 半角スペースが２つ以上かつ、"C:\video.ts"が存在している場合は起動したあとに処理が開始しない。  
 -i "C:\video.ts"  -o "C:\video.ts.d2v"  
-のように"C:\video.ts.d2v"がまだ作成前のファイルパスなら問題はありません。
+のように"C:\video.ts.d2v"が作成前のファイルのパスなら問題はありません。
 
 
 
