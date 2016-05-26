@@ -29,13 +29,11 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
     ExitOnEnd = 0;
     hadRGoption = 0;
 
-    /*pf_append*/
     Mode_PipeInput = false;
     StdinHeadFile_Size_CmdLine = 0;
     SpeedLimit_CmdLine = 0;
     Mode_NoDialog = false;
     Mode_UseBad = false;
-    /*pf_end_append*/
 
     while (1)
     {
@@ -99,8 +97,9 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
           RefreshWindow(true);
         }
 
+
+
         //==========================================================================
-        /*  pf_append  */
         if (!_stricmp(opt, "pipe"))
         {
           Mode_PipeInput = true;
@@ -210,8 +209,9 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
             limit_MiB = 0;
           SpeedLimit_CmdLine = limit_MiB;
         }
-        /*pf_end_append*/
         //==========================================================================
+
+
 
         if (!strncmp(opt, "ai", 3))
         {

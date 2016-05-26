@@ -102,9 +102,6 @@
     <ClCompile Include="AC3Dec\sanity_check.cpp">
       <Filter>AC3Dec</Filter>
     </ClCompile>
-    <ClCompile Include="pf_Logger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="pf_Initialize.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

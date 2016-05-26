@@ -1,9 +1,8 @@
 #include "global.h"
 //
-//デバッグ用  引数
+// コマンドライン　サンプル
 // 
 //  -i "E:\TS_Samp\n20s.ts" -o "E:\TS_Samp\n20s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
-//  -i "E:\TS_Samp\scramble_180s.ts" -o "E:\TS_Samp\scramble_180s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
 //
 
 //
@@ -12,7 +11,6 @@
 //
 int Initialize_pf()
 {
-  //initialize
   IsClosed_stdin = true;
   GetExtraData_fromStdin = false;
 
@@ -29,15 +27,6 @@ int Initialize_pf()
   tickBeginTime_speedlimit = system_clock::now();
   SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    //Byte/sec --> MiB/sec
 
-  //デバッグ用のログ
-  {
-    Enable_pfLog = false;
-#ifdef _DEBUG
-    Enable_pfLog = true;//  true  false
-    Logger_Initilaize();
-#endif
-  }
-
   return 0;
 }
 
@@ -47,20 +36,21 @@ int Initialize_pf()
 //
 int Initialize_stdin()
 {
-  // -i "filepath"　-pipe 　同時に指定されたらプロセス終了。
+  // -i "filepath" ,　-pipe が同時に指定されていた。
   if (NumLoadedFiles != 1) return 1;
 
   //
-  //Input
+  //Input pipe
   //
   _setmode(_fileno(stdin), _O_BINARY);
   fdStdin = _fileno(stdin);
 
   //
   //StdinHeadFile
-  //  標準入力の先頭部をファイルに書き出す、
-  //  ファイルにすることでseekに対応する。
-  //set size
+  //  標準入力の先頭部をファイルに書き出す。
+  //  ファイルにすることでseek処理に対応する。
+
+
   double filesize = StdinHeadFile_Size_CmdLine;
   filesize = (6 < filesize) ? filesize : 6;                //greater than 6 MiB
   StdinHeadFile_Size = (int)(filesize * 1024 * 1024);
@@ -96,10 +86,10 @@ int Initialize_stdin()
 
   //
   //windowsのtempフォルダにDGI_pf_tmp_00000_2を作成し、ストリーム先頭部をファイルに保存する。
-  //  fdで書くと終了時に削除できなかった。FILE*で書いて閉じてから、fdで読み込む。
+  //  file descriptorでwrite()すると終了時に削除できなかった。FILE*で作成してから、fdで再オープン
   FILE *tmpfile;
 
-  //tmp file name
+  //filename
   DWORD pid = GetCurrentProcessId();
   int rnd = rand() % (1000 * 1000);
   std::string basename = "DGI_pf_tmp_" + std::to_string(pid) + std::to_string(rnd) + "_";
@@ -111,20 +101,19 @@ int Initialize_stdin()
   if (tmpfile == NULL)
     return 1;
 
-  //write
+  //write stream head
   size_t canwrite = fwrite(stdinHeadBuff, StdinHeadFile_Size, 1, tmpfile);
   if (canwrite == 0)
     return 1;
   fclose(tmpfile);
 
-  //release
   if (stdinHeadBuff != NULL)
   {
     delete[] stdinHeadBuff;
     stdinHeadBuff = NULL;
   }
 
-  //  file descriptorで再オープン
+  //file descriptorで再オープン
   fdStdinHeadFile = _open(StdinHeadFile_Path, _O_RDONLY | _O_BINARY);
   if (fdStdinHeadFile == -1)
     return 1;

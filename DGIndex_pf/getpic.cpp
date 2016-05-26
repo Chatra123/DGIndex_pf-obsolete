@@ -172,21 +172,11 @@ void WriteD2VLine(int finish)
   else strcat(D2VLine, "\n");
   fprintf(D2VFile, "%s", D2VLine);
 
-
-  /*pf_append*/
-  //６秒以上経過していたらファイルにフラッシュ
   if (6 < time(NULL) - timeFlushD2VFile)
   {
     fflush(D2VFile);
     timeFlushD2VFile = time(NULL);
   }
-
-  //pf_append
-  if (finish){
-    Logging_ts("finish");
-    Logging_ts("threadkill_msg = " + threadkill_msg);
-  }
-  /*pf_end_append*/
 
   gop_entries_ndx = 0;
 }
@@ -305,9 +295,6 @@ void Decode_Picture()
       {
         if (process.locate != LOCATE_RIP)
         {
-          //pf_append
-          threadkill_msg = "getpic.cpp 309";
-
           Write_Frame(backward_reference_frame, d2v_backward, 0);
           ThreadKill(MISC_KILL);
         }
@@ -328,9 +315,6 @@ void Decode_Picture()
       Frame_Number++;
     if (Info_Flag && process.locate == LOCATE_RIP && CLIPreview && Frame_Number >= 100)
     {
-      //pf_append
-      threadkill_msg = "getpic.cpp 332";
-
       CLIActive = 0;
       SendMessage(hWnd, CLI_PREVIEW_DONE_MESSAGE, 0, 0);
       ThreadKill(MISC_KILL);

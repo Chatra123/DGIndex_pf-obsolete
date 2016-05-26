@@ -26,26 +26,14 @@
 #include "getbit.h"
 #include "AC3Dec\ac3.h"
 
-/*pf_append*/
 #include <math.h>
 #include <thread>
 #include <chrono>
 using namespace std::chrono;
-/*pf_end_append*/
 
 unsigned int start;
 
-//==========================================================================
-/*pf_off*/
-//int _donread(int fd, void *buffer, unsigned int count)
-//{
-//int bytes;
-//bytes = _read(fd, buffer, count);
-//return bytes;
-//}
 
-/*pf_append*/
-//_donreadを標準入力に対応
 int _donread(int fd, void *buffer, unsigned int count)
 {
   unsigned int bytes = 0;
@@ -53,9 +41,10 @@ int _donread(int fd, void *buffer, unsigned int count)
   //標準入力
   if (Mode_PipeInput)
   {
+    //StdinHeadFile
     if (!_eof(fd))
     {
-      //StdinHeadFile
+
       bytes = _read(fd, buffer, count);
       if (bytes != count)
       {
@@ -75,8 +64,7 @@ int _donread(int fd, void *buffer, unsigned int count)
     Limit_ReadSpeed(bytes);
   }
 
-  fpos_tracker += bytes; //d2vに書き込むフレーム位置はfpos_trackerを元に計算する
-
+  fpos_tracker += bytes; //fpos_trackerを元にフレーム位置を計算する
   return bytes;
 }
 
@@ -90,7 +78,7 @@ int read_stdin(void *buffer, const int demandSize)
 
   while (read_sum < demandSize)
   {
-    char tmpbuff[BUFFER_SIZE]; //１回の_read()で読込むbuff
+    char tmpbuff[BUFFER_SIZE];
     int tickReadSize = demandSize - read_sum;
 
     int readsize = _read(fdStdin, tmpbuff, tickReadSize);
@@ -115,6 +103,7 @@ int read_stdin(void *buffer, const int demandSize)
   return read_sum;
 }
 
+
 //
 //ファイル読込速度制限
 //
@@ -122,7 +111,7 @@ void Limit_ReadSpeed(unsigned int readsize)
 {
   if (0 < SpeedLimit)
   {
-    tickReadSize_speedlimit += readsize; //単位時間の読込み量500ms単位
+    tickReadSize_speedlimit += readsize;                                 //単位時間の読込み量500ms単位
     auto tickDuration = system_clock::now() - tickBeginTime_speedlimit;  //計測時間
     auto duration_ms = duration_cast<milliseconds>(tickDuration).count();
 
@@ -134,13 +123,11 @@ void Limit_ReadSpeed(unsigned int readsize)
     }
 
     //制限をこえたらsleep_for
-    if (SpeedLimit * (500.0 / 1000.0) < tickReadSize_speedlimit)  //byte/sec
+    if (SpeedLimit * (500.0 / 1000.0) < tickReadSize_speedlimit)
       std::this_thread::sleep_for(milliseconds(500 - duration_ms));
   }
 }
 
-/*pf_end_append*/
-//==========================================================================
 
 
 
@@ -607,18 +594,7 @@ void Next_Transport_Packet()
   static unsigned int prev_code;
   bool pmt_check = false;
   unsigned int check_num_pmt = 0;
-
-  /*pf_append*/
-  //time_limitにかからないように 5000 → 60 * 1000に変更
-  //入力が５秒こないことはありえるので延長
-  unsigned int time_limit = 60 * 1000;/*pf_append*/
-
-  /*pf_off*/
-  //unsigned int time_limit = 5000;
-  //#ifdef _DEBUG
-  //time_limit = 300000;/* Change 5 minutes. */
-  //#endif
-  /*pf_end_off*/
+  unsigned int time_limit = 60 * 1000;
 
   int counter = 0;
   start = timeGetTime();
@@ -646,62 +622,26 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    const unsigned int pmtcheck_interval = (Mode_PipeInput) ? 3000 : 500; /*pf_append*/
-
+    const unsigned int pmtcheck_interval = (Mode_PipeInput) ? 3000 : 500;
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
     time = timeGetTime();
     if (time - start > time_limit)
     {
-      //pf_append
-      {
-        Logging_ts("Cannot find audio or video data. ");
-        Logging_ts("time = " + std::to_string(time));
-        Logging_ts("start= " + std::to_string(start));
-        Logging_ts("time - start = " + std::to_string((time - start)));
-        threadkill_msg = "Cannot find audio or video data.";
-      }
-
-      if (Mode_NoDialog == false)/*pf_append*/
+      if (Mode_NoDialog == false)
         MessageBox(hWnd, "Cannot find audio or video data. Ensure that your PIDs\nare set correctly in the Stream menu. Refer to the\nUsers Manual for details.",
         NULL, MB_OK | MB_ICONERROR);
       ThreadKill(MISC_KILL);
     }
-    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > pmtcheck_interval)  /*pf_append*/
-      //else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > 500)   
+    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > pmtcheck_interval)
     {
-      {
-        std::ostringstream log;
-        log << "InitializePMTCheckItems()" << std::endl;
-        log << "                            ";
-        log << "  time - start = " << (time - start) << std::endl;
-        Logging_ts(log.str());
-      }
       pat_parser.InitializePMTCheckItems();
       pmt_check = true;
     }
 
-
-    /*pf_append_off*/
     // Search for a sync byte. Gives some protection against emulation.
-    //if (Stop_Flag)
-    //ThreadKill(MISC_KILL);
-
-
-    /*pf_append*/
     if (Stop_Flag)
-    {
-      {
-        std::ostringstream log;
-        log << "ThreadKill(MISC_KILL);" << std::endl;
-        log << "                            ";
-        log << "  Search for a sync byte. Gives some protection against emulation." << std::endl;
-        Logging_ts(log.str());
-      }
-
-      ThreadKill(MISC_KILL);
-    }
-
+    ThreadKill(MISC_KILL);
 
     if (Get_Byte() != 0x47)
       goto retry_sync;
@@ -724,14 +664,12 @@ void Next_Transport_Packet()
     // for indexing when an I frame is detected.
     if (D2V_Flag)
     {
-      /*pf_append*/
       if (Mode_PipeInput)
       {
         //D2Vファイル内のバイト位置はPackHeaderPositionを元に計算する
         PackHeaderPosition = fpos_tracker
           - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 1;
       }
-      /*pf_end_append*/
       else
       {
         PackHeaderPosition = _telli64(Infile[CurrentFile])
@@ -1627,9 +1565,6 @@ void Next_Transport_Packet()
             check_num_pmt++;
             if (check_num_pmt >= num_pmt_pids)
             {
-              //pf_append
-              threadkill_msg = "check_num_pmt >= num_pmt_pids ThreadKill(MISC_KILL);";
-
               ThreadKill(MISC_KILL);
             }
           }
@@ -1666,48 +1601,19 @@ void Next_PVA_Packet()
   start = timeGetTime();
   for (;;)
   {
-    /*pf_off*/
-    // Don't loop forever. If we don't get data
-    // in a reasonable time (1 secs) we exit.
-    //time = timeGetTime();
-    //if (time - start > 2000)
-    //{
-    //MessageBox(hWnd, "Cannot find video data.", NULL, MB_OK | MB_ICONERROR);
-    //ThreadKill(MISC_KILL);
-    //}
-    /*pf_end_off*/
-
-    /*pf_append*/
     time = timeGetTime();
     if (time - start > 2000)
     {
-      Logging_ts("Cannot find video data.");
-      Logging_ts("time = " + std::to_string(time));
-      Logging_ts("start= " + std::to_string(start));
-      Logging_ts("time - start = " + std::to_string((time - start)));
-
-      if (Mode_NoDialog == false)/*pf_append*/
+      if (Mode_NoDialog == false)
         MessageBox(hWnd, "Cannot find video data.", NULL, MB_OK | MB_ICONERROR);
       ThreadKill(MISC_KILL);
     }
-    /*pf_end_append*/
-
-
 
     // Search for a good sync.
     for (;;)
     {
-      /*pf_append*/
       if (Stop_Flag)
-      {
-        Logging_ts("Stop_Flag.");
         ThreadKill(MISC_KILL);
-      }
-
-      //if (Stop_Flag)
-      //ThreadKill(MISC_KILL);
-
-
 
       // Sync word is 0x4156.
       if (Get_Byte() != 0x41) continue;
@@ -1981,12 +1887,11 @@ void Next_Packet()
     case PACK_START_CODE:
       if (D2V_Flag)
       {
-        /*pf_append*/
         if (Mode_PipeInput)
         {
           PackHeaderPosition = fpos_tracker;
           PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
-        }/*pf_end_append*/
+        }
         else
         {
           PackHeaderPosition = _telli64(Infile[CurrentFile]);
@@ -3171,9 +3076,8 @@ void UpdateInfo()
     processed += _telli64(Infile[CurrentFile]);
     processed *= TRACK_PITCH;
 
-    //processed /= Infiletotal; /*pf_off*/
-    if (Mode_PipeInput) processed = -1; /*pf_append*/
-    else processed /= Infiletotal;/*pf_append*/
+    if (Mode_PipeInput) processed = -1;
+    else processed /= Infiletotal;
 
     trackpos = (int)processed;
     SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, trackpos);

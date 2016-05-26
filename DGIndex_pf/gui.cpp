@@ -27,7 +27,7 @@
 #include "resource.h"
 #include "Shlwapi.h"
 
-/*pf_append*/
+
 #include <list>
 #include <share.h>										//_SH_DENYWR			line1140
 
@@ -259,7 +259,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HDDisplay = HD_DISPLAY_SHRINK_BY_HALF;
     for (i = 0; i < 4; i++)
       mMRUList[i][0] = 0;
-    InfoLog_Flag = 0;		/*pf_end_append*/
+    InfoLog_Flag = 0;
     BMPPathString[0] = 0;
     UseMPAExtensions = 0;
     NotifyWhenDone = 0;
@@ -644,7 +644,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (parse_cli(lpCmdLine, ucCmdLine) != 0)
       exit(0);
 
-    /*pf_append*/
     if (Initialize_pf() != 0)
       exit(0);
 
@@ -1032,9 +1031,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case IDM_PLAY:
       if (!Check_Flag)
       {
-        //MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
-
-        if (Mode_NoDialog == false)/*pf_append*/
+        if (Mode_NoDialog == false)
           MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
       }
       else if (IsWindowEnabled(hTrack))
@@ -1087,9 +1084,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     proceed:
       if (!Check_Flag)
       {
-        //MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
-
-        if (Mode_NoDialog == false)/*pf_append*/
+        if (Mode_NoDialog == false)
           MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
 
         if (ExitOnEnd)
@@ -1113,7 +1108,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         sprintf(szBuffer, "%s.d2v", szOutput);
         if (CLIActive)
         {
-          if ((D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR)) == NULL)													/*pf_append*/
+          if ((D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR)) == NULL)
           {
             if (ExitOnEnd)
             {
@@ -1132,29 +1127,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))	         /*pf_append*/
-            //if (D2VFile = fopen(szBuffer, "r"))
+          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))
           {
-            char line[255];
-
             fclose(D2VFile);
+
+            char line[255];
             sprintf(line, "%s already exists.\nDo you want to replace it?", szBuffer);
             if (MessageBox(hWnd, line, "Save D2V",
               MB_YESNO | MB_ICONWARNING) != IDYES)
               break;
           }
 
-          ////D2VFile = fopen(szBuffer, "w+");
-          D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR);													/*pf_append*/
+          D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR);
           strcpy(D2VFilePath, szBuffer);
-        }
-
-        /*pf_append_dbg*/
-        if (D2VFile == NULL)
-        {
-          char log[256] = "";
-          sprintf(log, "d2v open error,  fpos_tracker  %I64d \n", fpos_tracker);
-          Logging_pf(log);
         }
 
         if (D2VFile != 0)
@@ -1224,17 +1209,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         char line[2048];
         int D2Vformat;
 
-        ////D2VFile = fopen(szInput, "r");
-        D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR);													/*pf_append*/
+        D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR);
 
         // Validate the D2V file.
         fgets(line, 2048, D2VFile);
         if (strncmp(line, "DGIndexProjectFile", 18) != 0)
         {
-          if (Mode_NoDialog == false)/*pf_append*/
+          if (Mode_NoDialog == false)
             MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
-
-          //MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
           fclose(D2VFile);
           break;
         }
@@ -2901,16 +2883,6 @@ static void OpenVideoFile(HWND hVideoListDlg)
 
 void ThreadKill(int mode)
 {
-  /*pf_append*/
-  {
-    std::ostringstream log;
-    log << "ThreadKill:  mode = " << mode <<std::endl;
-    log << "                            ";
-    log << "  ( MISC_KILL = 0 , END_OF_DATA_KILL = 1 )" << std::endl;
-    Logging_ts(log.str());
-  }
-
-
   int i;
   double film_percent;
 
@@ -2976,7 +2948,6 @@ void ThreadKill(int mode)
     }
 
     //==========================================================================
-    /*pf_append*/
     //ファイル終端が確定したので書き換え
     if (D2V_Flag && Mode_PipeInput)
     {
@@ -3039,26 +3010,17 @@ void ThreadKill(int mode)
     }
 
     //
+    //StdinHeadFileで処理する段階で標準入力から追加読み込みをしたか？
     //D2V作成前にStdinから追加の読込みをした。
     //データの連続性が維持できないので、プロセスを強制終了。
     //StdinHeadFile_Size_CmdLineを増やして対応する。
     //
     if (D2V_Flag == false && GetExtraData_fromStdin)
     {
-      std::ostringstream log;
-      log << "StdinHeadBuff is too small" << std::endl;
-      log << "                            ";
-      log << "  StdinHeadFile_Size_CmdLine = " << StdinHeadFile_Size_CmdLine << std::endl;
-      log << "                            ";
-      log << "  StdinHeadFile_Size         = " << StdinHeadFile_Size << std::endl;
-      log << "                            ";
-      log << "  fpos_tracker               = " << fpos_tracker << std::endl;
-      Logging_ts(log.str());
       _close(fdStdinHeadFile);
       remove(StdinHeadFile_Path);
       exit(1);
     }
-
 
     //一時ファイル削除、２回目のThreadKill(int)で削除
     if (D2V_Flag && Mode_PipeInput)
@@ -3067,8 +3029,6 @@ void ThreadKill(int mode)
       remove(StdinHeadFile_Path);
     }
 
-    /*pf_end_append*/
-    //==========================================================================
 
     _fcloseall();
 

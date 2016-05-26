@@ -34,26 +34,6 @@ extern void StartVideoDemux(void);
 
 DWORD WINAPI MPEG2Dec(LPVOID n)
 {
-  /* pf_append */
-  /*
-  MPEG2Dec parameter list
-  #define LOCATE_INIT         0
-  #define LOCATE_FORWARD      1
-  #define LOCATE_BACKWARD     -1
-  #define LOCATE_SCROLL       2
-  #define LOCATE_RIP          3
-  #define LOCATE_PLAY         4
-  #define LOCATE_DEMUX_AUDIO  5
-  */
-  {
-    std::ostringstream log;
-    log << "MPEG2Dec  = " << process.locate << std::endl;
-    Logging_ts(log.str());
-  }
-
-
-
-
   int i = (int)n; // Prevent compiler warning.
   extern __int64 VideoPTS;
   extern __int64 AudioPTS;
@@ -149,7 +129,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     CurrentFile = process.startfile;
 
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     Initialize_Buffer();
 
@@ -188,7 +168,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // Position to start of the first file.
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     Initialize_Buffer();
     while (1)
@@ -214,24 +194,22 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // captured transport files were seen to start with a large
     // number of nulls.
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     for (;;)
     {
       if (_read(Infile[0], buf, 1) == 0)
       {
-        if (Mode_NoDialog == false)/*pf_append*/
-          MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
-
         // EOF
-        //MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
+        if (Mode_NoDialog == false)
+          MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
         return 0;
       }
       if (buf[0] != 0)
       {
         // Unread the non-null byte and exit.
         _lseeki64(Infile[0], _lseeki64(Infile[0], 0, SEEK_CUR) - 1, SEEK_SET);
-        fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+        fpos_tracker = _telli64(Infile[process.startfile]);
 
         break;
       }
@@ -282,7 +260,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       CurrentFile = 0;
       _lseeki64(Infile[0], 0, SEEK_SET);
-      fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+      fpos_tracker = _telli64(Infile[process.startfile]);
 
       Initialize_Buffer();
 
@@ -303,7 +281,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // We're already byte aligned at the start of the file.
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     Initialize_Buffer();
     count = 0;
@@ -311,14 +289,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       if (Stop_Flag || count > 10000000)
       {
-        /*pf_append*/
         //ÉXÉNÉâÉìÉuÉãÇ™âèúÇ≈Ç´ÇƒÇ¢Ç»Ç¢ìô
         // We didn't find a sequence header.
-        if (Mode_NoDialog == false)/*pf_append*/
+        if (Mode_NoDialog == false)
           MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
-
-        // We didn't find a sequence header.
-        //MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
         ThreadKill(MISC_KILL);
       }
       Flush_Buffer(8);
@@ -343,7 +317,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
 
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     Initialize_Buffer();
 
@@ -461,7 +435,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     CurrentFile = process.startfile;
 
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     // We initialize the following variables to the current start position, because if the user
     // has set a range, and the packs are large such that we won't hit a pack/packet start
@@ -507,7 +481,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
 
 
   _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
-  fpos_tracker = _telli64(Infile[process.startfile]);			/*pf_append*/
+  fpos_tracker = _telli64(Infile[process.startfile]);
 
   // We initialize the following variables to the current start position, because if the user
   // has set a range, and the packs are large such that we won't hit a pack/packet start
@@ -584,7 +558,7 @@ static BOOL GOPBack()
     }
 
     _lseeki64(Infile[process.startfile], process.startloc, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);     /*pf_append*/
+    fpos_tracker = _telli64(Infile[process.startfile]);
 
     Initialize_Buffer();
 

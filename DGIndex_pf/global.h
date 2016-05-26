@@ -38,19 +38,10 @@
 #include "resource.h"
 #include "pat.h"
 
-/*pf_append*/
 #include <thread>
 #include <chrono>
-
-//log
-#include <fstream>
-#include <iostream>
-#include <deque>
-#include <mutex>
-#include <thread>
 #include <string>
-#include <sstream>
-/*pf_end_append*/
+
 
 #ifdef GLOBAL
 #define XTN
@@ -148,8 +139,7 @@ XTN bool bIsWindowsXPorLater;
 #define CHROMA444       3
 
 #define SECTOR_SIZE            2048 
-#define BUFFER_SIZE          512000        //  512 KB   /*pf_append*/
-//#define BUFFER_SIZE            2048      //  /*pf_append_off*/
+#define BUFFER_SIZE          512000
 
 #define MAX_FILE_NUMBER         512
 #define MAX_PICTURES_PER_GOP    500
@@ -313,34 +303,8 @@ XTN int NumLoadedFiles;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //====================================================
-/*pf_append*/
 using namespace std::chrono;
-
 //
 //Mode
 //
@@ -351,23 +315,23 @@ XTN bool Mode_NoDialog;                  //suspend some dialog
 //
 //Stdin
 //
-XTN int fdStdin;                         //file discriptor
-XTN __int64 fpos_tracker;                //標準入力＆StdinHeadFileの違いを意識しないＴＳファイル上のポジション
+XTN int fdStdin;                         //stdin file discriptor
+XTN __int64 fpos_tracker;                //stdin & StdinHeadFile の違いを意識しないファイルポジション
 XTN char Stdin_SourcePath[DG_MAX_PATH];  //d2vファイル３行目に書き込むＴＳファイル名
-XTN bool IsClosed_stdin;                 //パイプ接続がきれたか
+XTN bool IsClosed_stdin;                 //パイプ接続がきれたか？
 
 //
+//StdinHeadFileで処理する段階で標準入力から追加読み込みをしたか？
+//  Seekが多用される段階でファイル以外から読み込むとTSファイルの整合性がとれなくなる。
+//  １回目のvoid ThreadKill(int mode)で判定すし、（D2V作成前）
+//  trueならプロセス終了する。
+//  StdinHeadFile_Size_CmdLineを増やして対応する。
 //
-//StdinHeadFileで処理する段階で標準入力を使用したかを判定する。
-//Seekが多用される段階でファイル以外から読み込むとTSファイルの整合性がなくなる。
-//１回目のvoid ThreadKill(int mode)で判定する。（D2V作成前）
-//trueならプロセス終了、StdinHeadFile_Size_CmdLineを増やして対応する。
-//
-XTN bool GetExtraData_fromStdin;         //Stdinから追加で読み込んだか
+XTN bool GetExtraData_fromStdin;         //Stdinから追加読み込みをしたか？
 
 
 //
-//func
+//function
 //
 XTN int Initialize_pf(void);
 XTN int Initialize_stdin(void);
@@ -377,7 +341,7 @@ XTN void Limit_ReadSpeed(unsigned int readsize);
 //
 //StdinHeadFile
 //　ストリーム先頭部分をファイルとして保存
-XTN char* StdinHeadFile_Path;            //先頭部を保存したファイルパス
+XTN char* StdinHeadFile_Path;            //先頭部のファイルパス
 XTN int fdStdinHeadFile;                 //file discriptor
 XTN double StdinHeadFile_Size_CmdLine;   //コマンドライン指定のファイルサイズ  MiB
 XTN int StdinHeadFile_Size;              //              実際のファイルサイズ  Byte
@@ -387,59 +351,12 @@ XTN time_t timeFlushD2VFile;             //d2vファイルを更新した時間
 
 //ファイル読込み速度制限
 XTN double tickReadSize_speedlimit;      //500ms間の読込み量
-//                                         500ms間の計測開始時間
+//                                                   500ms間の計測開始時間
 XTN time_point<system_clock, system_clock::duration> tickBeginTime_speedlimit;
 XTN double SpeedLimit_CmdLine;           //コマンドライン指定の最大読込み速度  MiB/sec
 XTN double SpeedLimit;                   //                    最大読込み速度 Byte/sec
 
-
-
-//
-//ログ　　デバッグ用
-//
-XTN bool Enable_pfLog;                   //pfLogの有効、無効
-
-XTN void Logger_Initilaize();            //logger  func()
-XTN std::string log_srcname;             //ログ用　入力ソース名
-XTN std::string Get_TimeCode();          //タイムコード更新
-
-//共有ログファイル
-XTN void Logging_pf(char* msg);
-
-//tsごとのログファイル
-XTN void Logging_ts(char* msg);
-XTN void Logging_ts(std::string  msg);
-XTN std::string logpath_ts;
-XTN std::string threadkill_msg;
-
-/*pf_end_append*/
 //====================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

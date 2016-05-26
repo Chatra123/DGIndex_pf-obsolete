@@ -145,7 +145,7 @@ int Get_Hdr(int mode)
 
   //ドロップの多いファイルで無限ループになった。
   // case 0x1be: でループしつづけないようにチェック。
-  int loop_counter_Get_Hdr = 0;  /*pf_append*/
+  int loop_counter = 0;
 
   for (;;)
   {
@@ -158,14 +158,9 @@ int Get_Hdr(int mode)
     code = Show_Bits(32);
     switch (code)
     {
-      /*pf_off*/
-      //case 0x1be:
-      //  break;
-
-    /*pf_append*/
     case 0x1be:
-      loop_counter_Get_Hdr++;
-      if (loop_counter_Get_Hdr <= 40)
+      loop_counter++;
+      if (loop_counter <= 40)
       {
         break;
       }
@@ -194,21 +189,6 @@ int Get_Hdr(int mode)
           - (BUFFER_SIZE - (Rdptr - Rdbfr))
           - 8
           + (32 - BitsLeft) / 8;
-
-
-
-        /*pf_append*/
-        long long int d2v_cur_pos = fpos_tracker
-          - (BUFFER_SIZE - (Rdptr - Rdbfr))
-          - 8
-          + (32 - BitsLeft) / 8;
-        if (d2v_current.position != d2v_cur_pos){
-          char log[128] = "";
-          sprintf(log, "d2v_cur_pos is not eq,  d2v_cur_pos = %I64d", d2v_cur_pos);
-          Logging_pf(log);
-        }
-
-
       }
       Get_Bits(32);
       sequence_header();
@@ -487,18 +467,12 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
       process.lba = d2v_current.lba;
     }
 
-    //// This triggers if we reach the right marker position.
-    //if (CurrentFile==process.endfile && process.startloc>=process.endloc)       // D2V END
-    //{
-    //	ThreadKill(END_OF_DATA_KILL);
-    //}
 
-    //pf_append
+
     if (Mode_PipeInput)
     {
       if (IsClosed_stdin)
       {
-        Logging_ts("IsClosed_stdin==true");
         ThreadKill(END_OF_DATA_KILL);
       }
     }
