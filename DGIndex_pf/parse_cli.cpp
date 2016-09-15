@@ -30,10 +30,12 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
     hadRGoption = 0;
 
     Mode_PipeInput = false;
-    StdinHeadFile_Size_CmdLine = 0;
+    Mode_Hide = false;
+    HeadFileSize_CmdLine = 0;
     SpeedLimit_CmdLine = 0;
     Mode_NoDialog = false;
     Mode_UseBad = false;
+
 
     while (1)
     {
@@ -103,113 +105,108 @@ int parse_cli(LPSTR lpCmdLine, LPSTR ucCmdLine)
         if (!_stricmp(opt, "pipe"))
         {
           Mode_PipeInput = true;
-          while (*p == ' ' || *p == '\t') p++;   //文字が見つかるまで空白スキップ
+          while (*p == ' ' || *p == '\t') p++;  //空白スキップ
           f = name;
 
           while (1)
           {
-            //　　　　"の外　　＆　　空白or終端なら終了
+            //　　　　"の外　　＆　　空白or終端
             if ((in_quote == 0) && (*p == ' ' || *p == '\t' || *p == 0))
               break;
-
-            //　　　　"の外　　＆　　パラメータ開始文字なら終了
+            //　　　　"の外　　＆　　パラメータ開始文字
             if ((in_quote == 0) && (*p == '-' || *p == '/'))
               break;
-
-            //　　　　"の内　　＆　　終端なら終了
+            //　　　　"の内　　＆　　終端
             if ((in_quote == 1) && (*p == 0))
               break;
-
             //　 "の内外の設定
             if (*p == '"')
             {
-              //　"の外？
               if (in_quote == 0)
               {
-                in_quote = 1;          //　"の内に設定
+                in_quote = 1;          //　"の内
                 p++;
               }
               else
               {
-                in_quote = 0;          //　"の外に設定
+                in_quote = 0;          //　"の外
                 p++;
                 break;
               }
             }
-
-            // fに引数の１文字 pを割り当て、進める
+            //１文字読んで、進める
             *f++ = *p++;
           }
           *f = 0;
 
-          strcpy(Stdin_SourcePath, name);
+          Stdin_SourcePath = std::string(name);
           Recovery();
           RefreshWindow(true);
-
-          //Recovery()内で Infilelength[i]を取得している。
-          //Stdin_SourcePathのファイルサイズが確定していないので上手く処理できない。
-          //Recovery()の後でNumLoadedFiles++
+          //Recovery()内で Infilelength[i]が取得されるが
+          //ファイルサイズが確定していないので処理できない。
+          //NumLoadedFiles=0で処理し、Recovery()の後でNumLoadedFiles++
           NumLoadedFiles++;
-        }
-        else if (!_stricmp(opt, "usebad"))
-        {
-          Mode_UseBad = true;
         }
         else if (!_stricmp(opt, "nodialog"))
         {
           Mode_NoDialog = true;
         }
-        else if (!_stricmp(opt, "streamheadfile"))
+        else if (!_stricmp(opt, "hide"))
         {
-          //StdinHeadFile_Size_CmdLine
+          Mode_Hide = true;
+        }
+        else if (!_stricmp(opt, "usebad"))
+        {
+          Mode_UseBad = true;
+        }
+        else if (!_stricmp(opt, "streamheadsize"))
+        {
+          //HeadFileSize_CmdLine  MiB
           char *param, paramText[32];
           memset(paramText, '\0', 32);
           param = paramText;
 
-          while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
+          while (*p == ' ' || *p == '\t')  p++;            //空白スキップ
 
           while (1)
           {
-            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端なら終了
+            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端
               break;
-            if (*p == '-' || *p == '/')                    //パラメータ開始文字なら終了
+            if (*p == '-' || *p == '/')                    //パラメータ開始文字
               break;
-
-            *param++ = *p++;                               //*paramに引数を１文字割り当て、進める
+            *param++ = *p++;
           }
 
-          double buffsize;
-
-          if (sscanf_s(paramText, "%lf", &buffsize) <= 0)
-            buffsize = 0;
-          StdinHeadFile_Size_CmdLine = buffsize;
+          double size;
+          if (sscanf_s(paramText, "%lf", &size) <= 0)
+            size = 0;
+          HeadFileSize_CmdLine = size;
         }
         else if (!_stricmp(opt, "limit"))
         {
-          //ファイル読込速度
-          char *param, paramText[64];
-          memset(paramText, '\0', 64);
+          //ファイル読込速度  MiB/sec
+          char *param, paramText[32];
+          memset(paramText, '\0', 32);
           param = paramText;
 
-          while (*p == ' ' || *p == '\t') p++;             //文字が見つかるまで空白スキップ
+          while (*p == ' ' || *p == '\t')  p++;            //空白スキップ
 
           while (1)
           {
-            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端なら終了
+            if (*p == ' ' || *p == '\t' || *p == 0)        //空白or終端 
               break;
-            if (*p == '-' || *p == '/')                    //パラメータ開始文字なら終了
+            if (*p == '-' || *p == '/')                    //パラメータ開始文字 
               break;
-
-            *param++ = *p++;                               //*paramに引数を１文字割り当て、進める
+            *param++ = *p++;
           }
 
-          double limit_MiB;
-
-          if (sscanf_s(paramText, "%lf", &limit_MiB) <= 0)
-            limit_MiB = 0;
-          SpeedLimit_CmdLine = limit_MiB;
+          double limit;
+          if (sscanf_s(paramText, "%lf", &limit) <= 0)
+            limit = 0;
+          SpeedLimit_CmdLine = limit;
         }
         //==========================================================================
+
 
 
 
