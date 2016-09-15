@@ -1,131 +1,113 @@
-#include "global.h"
-//
-// コマンドライン　サンプル
-// 
-//  -i "E:\TS_Samp\n20s.ts" -o "E:\TS_Samp\n20s.ts" -ia 4 -fo 0 -yr 2 -om 2 -nodialog -limit 10.0
-//
+/*
+メモ
+◇　skl_nasm.hに対して”ドキュメントのフォーマット”を実行した後にリビルドすると
+　　失敗する。skl_nasm.hに”ドキュメントのフォーマット”を実行してはいけない。
+　　　　error MSB6006: "cmd.exe" はコード 1 を伴って終了しました。
 
-//
-//パイプ処理の初期化
-//parse_cliを処理した直後に実行すること。
-//
+
+◇　getbit.cppに”ドキュメントのフォーマット”を実行するとマクロ定義部の水平タブが増殖し、
+　　ファイルサイズがわずかに増える。
+
+
+*/
+
+#include "global.h"
+
+
+//パイプ入力の初期化
+//parse_cli()を処理した直後に実行すること。
 int Initialize_pf()
 {
-  IsClosed_stdin = true;
-  GetExtraData_fromStdin = false;
-
   if (Mode_PipeInput &&
     Initialize_stdin() == 1)
   {
-    //エラー
-    remove(StdinHeadFile_Path);
+    if (fdHeadFile != -1)
+      _close(fdHeadFile);
+    remove(HeadFilePath.c_str());
     return 1;                            //プロセス終了
   }
 
+  IsClosed_stdin = false;
+  GetExtraData_fromStdin = false;
   timeFlushD2VFile = time(NULL);
   tickReadSize_speedlimit = 0;
   tickBeginTime_speedlimit = system_clock::now();
-  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;    //Byte/sec --> MiB/sec
-
+  SpeedLimit = SpeedLimit_CmdLine * 1024 * 1024;
   return 0;
 }
 
 
-//
-//Initialize_stdin
-//
+
+//HeadFile作成
 int Initialize_stdin()
 {
-  // -i "filepath" ,　-pipe が同時に指定されていた。
-  if (NumLoadedFiles != 1) return 1;
+  // -i "filepath" -pipe が同時に指定されていた。
+  if (NumLoadedFiles != 1)
+    return 1;
 
-  //
-  //Input pipe
-  //
+  //HeadFile
+  //  標準入力の先頭部をファイルに書き出す。
+  //  ファイルにすることでseekに対応
   _setmode(_fileno(stdin), _O_BINARY);
   fdStdin = _fileno(stdin);
 
-  //
-  //StdinHeadFile
-  //  標準入力の先頭部をファイルに書き出す。
-  //  ファイルにすることでseek処理に対応する。
-
-
-  double filesize = StdinHeadFile_Size_CmdLine;
-  filesize = (6 < filesize) ? filesize : 6;                //greater than 6 MiB
-  StdinHeadFile_Size = (int)(filesize * 1024 * 1024);
-
-  //buff
-  char *stdinHeadBuff = new char[StdinHeadFile_Size];      //先頭部分保存用のバッファ
-  memset(stdinHeadBuff, '\0', StdinHeadFile_Size);
-
-  //
-  //  標準入力からデータ取り出し
-  //
-  int curBuffSize = 0;                                     //読込済サイズ
-
-  while (curBuffSize < StdinHeadFile_Size)
+  //WindowsのTempフォルダにDGI_temp_0000000_2を作成
   {
-    int requestSize = StdinHeadFile_Size - curBuffSize;    //要求サイズ
-    int readsize = _read(fdStdin, stdinHeadBuff + curBuffSize, requestSize);
+    DWORD pid = GetCurrentProcessId();
+    std::random_device rnd;
+    std::mt19937 mt(rnd());
+    UINT32 rnd_num = mt() % (1000 * 1000);
+    std::string tmp_path;
+    tmp_path = "DGI_temp_" + std::to_string(pid) + std::to_string(rnd_num) + "_";
+    tmp_path = std::string(_tempnam(NULL, tmp_path.c_str()));
+    HeadFilePath = tmp_path;
+  }
+  fdHeadFile = _open(HeadFilePath.c_str(), _O_CREAT | _O_RDWR | _O_BINARY, _S_IREAD | _S_IWRITE);
+  if (fdHeadFile == -1)
+    return 1;
+  int head_size;
+  {
+    const double mini_MB = 6.0;
+    double size = HeadFileSize_CmdLine;
+    size = mini_MB < size ? size : mini_MB;
+    head_size = (int)(size * 1024 * 1024);
+  }
 
-    if (readsize == -1)                                    //fail to connect
+
+  //標準入力からデータ取得、HeadFile書込
+  const int buff_size = 1024 * 32;
+  std::vector<BYTE> buff(buff_size);
+  int cur_size = 0;                  //HeadFileに書込済サイズ
+
+  while (cur_size < head_size)
+  {
+    int read = _read(fdStdin, &buff.front(), buff_size);
+    if (read == -1)
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-      continue;
+      Sleep(30);
+      continue;//fail to connect. wait.
     }
-    else if (readsize == 0)
-      return 1;		                                         //end of stream. too small source.
+    else if (read == 0)
+      break;//end of stream.
 
-    curBuffSize += readsize;
+    int written = _write(fdHeadFile, &buff.front(), read);
+    if (written != read)
+      return 1;
+    cur_size += written;
   }
-  IsClosed_stdin = false;
-  if (curBuffSize == 0) return 1;		                       //fail to read stdin. exit.
+  if (head_size <= cur_size)
+    head_size = cur_size;
+  else
+    return 1;//fail to read. too short stream.
 
-
-
-  //
-  //windowsのtempフォルダにDGI_pf_tmp_00000_2を作成し、ストリーム先頭部をファイルに保存する。
-  //  file descriptorでwrite()すると終了時に削除できなかった。FILE*で作成してから、fdで再オープン
-  FILE *tmpfile;
-
-  //filename
-  DWORD pid = GetCurrentProcessId();
-  int rnd = rand() % (1000 * 1000);
-  std::string basename = "DGI_pf_tmp_" + std::to_string(pid) + std::to_string(rnd) + "_";
-  StdinHeadFile_Path = _tempnam(NULL, basename.c_str());
-  if (StdinHeadFile_Path == NULL)
-    return 1;
-
-  tmpfile = fopen(StdinHeadFile_Path, "wb");
-  if (tmpfile == NULL)
-    return 1;
-
-  //write stream head
-  size_t canwrite = fwrite(stdinHeadBuff, StdinHeadFile_Size, 1, tmpfile);
-  if (canwrite == 0)
-    return 1;
-  fclose(tmpfile);
-
-  if (stdinHeadBuff != NULL)
-  {
-    delete[] stdinHeadBuff;
-    stdinHeadBuff = NULL;
-  }
-
-  //file descriptorで再オープン
-  fdStdinHeadFile = _open(StdinHeadFile_Path, _O_RDONLY | _O_BINARY);
-  if (fdStdinHeadFile == -1)
-    return 1;
 
   //Infileにセット
-  strcpy(Infilename[0], StdinHeadFile_Path);
-  Infile[0] = fdStdinHeadFile;
+  strcpy(Infilename[0], HeadFilePath.c_str());
+  Infile[0] = fdHeadFile;
+  _lseeki64(Infile[0], 0, SEEK_SET);
 
   return 0;
 }
-
-
 
 
 
