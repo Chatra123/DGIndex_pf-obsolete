@@ -168,7 +168,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // Position to start of the first file.
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);
+    fpos_tracker = _telli64(Infile[0]);
 
     Initialize_Buffer();
     while (1)
@@ -194,7 +194,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // captured transport files were seen to start with a large
     // number of nulls.
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);
+    fpos_tracker = _telli64(Infile[0]);
 
     for (;;)
     {
@@ -203,14 +203,15 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
         // EOF
         if (Mode_NoDialog == false)
           MessageBox(hWnd, "File contains all nulls!", NULL, MB_OK | MB_ICONERROR);
+        if (Mode_Hide)
+          ThreadKill(MISC_KILL);
         return 0;
       }
       if (buf[0] != 0)
       {
         // Unread the non-null byte and exit.
         _lseeki64(Infile[0], _lseeki64(Infile[0], 0, SEEK_CUR) - 1, SEEK_SET);
-        fpos_tracker = _telli64(Infile[process.startfile]);
-
+        fpos_tracker = _telli64(Infile[0]);
         break;
       }
     }
@@ -260,7 +261,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       CurrentFile = 0;
       _lseeki64(Infile[0], 0, SEEK_SET);
-      fpos_tracker = _telli64(Infile[process.startfile]);
+      fpos_tracker = _telli64(Infile[0]);
 
       Initialize_Buffer();
 
@@ -281,7 +282,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // We're already byte aligned at the start of the file.
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);
+    fpos_tracker = _telli64(Infile[0]);
 
     Initialize_Buffer();
     count = 0;
@@ -293,7 +294,8 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
         // We didn't find a sequence header.
         if (Mode_NoDialog == false)
           MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
-        ThreadKill(MISC_KILL);
+        if (Mode_Hide)
+          ThreadKill(MISC_KILL);
       }
       Flush_Buffer(8);
       count++;
@@ -306,7 +308,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
       is_program_stream = 0;
       if (initial_parse(Infilename[0], &mpeg_type, &is_program_stream) == -1)
       {
-        MessageBox(hWnd, "Cannot find video stream!", NULL, MB_OK | MB_ICONERROR);
+        if (Mode_NoDialog == false)
+          MessageBox(hWnd, "Cannot find video stream!", NULL, MB_OK | MB_ICONERROR);
+        if (Mode_Hide)
+          ThreadKill(MISC_KILL);
         return 0;
       }
       if (is_program_stream)
@@ -317,7 +322,7 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
 
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
-    fpos_tracker = _telli64(Infile[process.startfile]);
+    fpos_tracker = _telli64(Infile[0]);
 
     Initialize_Buffer();
 
@@ -355,10 +360,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       if (FullPathInFiles)
       {
-        if (Mode_PipeInput == false)
-          fprintf(D2VFile, "%s\n", Infilename[NumLoadedFiles - i]);
+        if (Mode_PipeInput)
+          fprintf(D2VFile, "%s\n", Stdin_SourcePath.c_str());
         else
-          fprintf(D2VFile, "%s\n", Stdin_SourcePath);
+          fprintf(D2VFile, "%s\n", Infilename[NumLoadedFiles - i]);
       }
       else
       {

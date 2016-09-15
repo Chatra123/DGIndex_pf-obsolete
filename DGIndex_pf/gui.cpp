@@ -28,9 +28,6 @@
 #include "Shlwapi.h"
 
 
-#include <list>
-#include <share.h>										//_SH_DENYWR			line1140
-
 #define GLOBAL
 #include "global.h"
 
@@ -166,8 +163,6 @@ static BOOL bIsWindowsVersionOK(DWORD dwMajor, DWORD dwMinor, WORD dwSPMajor)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-
-
   MSG msg;
   HACCEL hAccel;
   int i;
@@ -1031,8 +1026,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case IDM_PLAY:
       if (!Check_Flag)
       {
-        if (Mode_NoDialog == false)
-          MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
+        MessageBox(hWnd, "No data. Check your PIDS.", "Preview/Play", MB_OK | MB_ICONWARNING);
       }
       else if (IsWindowEnabled(hTrack))
       {
@@ -1086,9 +1080,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       {
         if (Mode_NoDialog == false)
           MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
-
-        if (ExitOnEnd)
+        if (ExitOnEnd || Mode_Hide)
           exit(EXIT_FAILURE);
+
+        //  MessageBox(hWnd, "No data. Check your PIDS.", "Save Project", MB_OK | MB_ICONWARNING);
+        //if (ExitOnEnd)
+        //  exit(EXIT_FAILURE);
         break;
       }
       if (!CLIActive && (FO_Flag == FO_FILM) && ((mpeg_type == IS_MPEG1) || ((int)(frame_rate * 1000) != 29970)))
@@ -1215,8 +1212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         fgets(line, 2048, D2VFile);
         if (strncmp(line, "DGIndexProjectFile", 18) != 0)
         {
-          if (Mode_NoDialog == false)
-            MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
+          MessageBox(hWnd, "The file is not a DGIndex project file!", NULL, MB_OK | MB_ICONERROR);
           fclose(D2VFile);
           break;
         }
@@ -2019,20 +2015,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           Info_Flag = false;
         }
         //                      if ((process.file < process.rightfile) || (process.file==process.rightfile && process.lba<process.rightlba))
-          {
-            process.leftfile = process.file;
-            process.leftlba = process.lba;
+        {
+          process.leftfile = process.file;
+          process.leftlba = process.lba;
 
-            process.run = 0;
-            for (i = 0; i < process.leftfile; i++)
-              process.run += Infilelength[i];
-            process.trackleft = ((process.run + process.leftlba * SECTOR_SIZE) * TRACK_PITCH / Infiletotal);
+          process.run = 0;
+          for (i = 0; i < process.leftfile; i++)
+            process.run += Infilelength[i];
+          process.trackleft = ((process.run + process.leftlba * SECTOR_SIZE) * TRACK_PITCH / Infiletotal);
 
-            SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackleft);
-            InvalidateRect(hwndSelect, NULL, TRUE);
-            //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
-          }
+          SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackleft);
           InvalidateRect(hwndSelect, NULL, TRUE);
+          //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
+        }
+        InvalidateRect(hwndSelect, NULL, TRUE);
       }
       break;
 
@@ -2092,20 +2088,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           Info_Flag = false;
         }
         //                      if ((process.file>process.leftfile) || (process.file==process.leftfile && process.lba>process.leftlba))
-          {
-            process.rightfile = process.file;
-            process.rightlba = process.lba;
+        {
+          process.rightfile = process.file;
+          process.rightlba = process.lba;
 
-            process.run = 0;
-            for (i = 0; i < process.rightfile; i++)
-              process.run += Infilelength[i];
-            process.trackright = ((process.run + (__int64)process.rightlba*SECTOR_SIZE)*TRACK_PITCH / Infiletotal);
+          process.run = 0;
+          for (i = 0; i < process.rightfile; i++)
+            process.run += Infilelength[i];
+          process.trackright = ((process.run + (__int64)process.rightlba*SECTOR_SIZE)*TRACK_PITCH / Infiletotal);
 
-            SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackright);
-            InvalidateRect(hwndSelect, NULL, TRUE);
-            //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
-          }
+          SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, (LONG)process.trackright);
           InvalidateRect(hwndSelect, NULL, TRUE);
+          //                          SendMessage(hTrack, TBM_SETSEL, (WPARAM) true, (LPARAM) MAKELONG(process.trackleft, process.trackright));
+        }
+        InvalidateRect(hwndSelect, NULL, TRUE);
       }
       break;
 
@@ -2947,87 +2943,66 @@ void ThreadKill(int mode)
       StopVideoDemux();
     }
 
+
+
+
+
+
+
+
     //==========================================================================
-    //ファイル終端が確定したので書き換え
-    if (D2V_Flag && Mode_PipeInput)
-    {
-      //再オープン
-      fclose(D2VFile);
-
-      D2VFile = NULL;
-      for (size_t i = 0; i < 10; i++)
-      {
-        D2VFile = _fsopen(D2VFilePath, "r", _SH_DENYWR);
-        if (D2VFile != NULL) break;
-        Sleep(1000);
-      }
-
-      //全行読み込み
-      std::list<char*> text;
-
-      if (D2VFile)
-      {
-        char line[512];
-        while (fgets(line, 512, D2VFile) != NULL)
-        {
-          if (strncmp(line, "Location=0,0,0,0", 16) == 0)
-          {
-            // rightlba　更新
-            __int64 rightlba = (int)(fpos_tracker / SECTOR_SIZE);
-            sprintf(line, "Location=0,0,0,%I64x\n", rightlba);
-          }
-
-          //copy line
-          size_t len = strlen(line);
-          char *newline = new char[len + 1];
-          strncpy(newline, line, len + 1);
-          text.push_back(newline);
-        }
-      }
-
-      //再オープン
-      fclose(D2VFile);
-
-      D2VFile = NULL;
-      for (size_t i = 0; i < 10; i++)
-      {
-        D2VFile = _fsopen(D2VFilePath, "w", _SH_DENYWR);
-        if (D2VFile != NULL) break;
-        Sleep(1000);
-      }
-
-      //再書き込み
-      if (D2VFile)
-      {
-        while (0 < text.size())
-        {
-          fputs(text.front(), D2VFile);
-          delete text.front();
-          text.front() = NULL;
-          text.pop_front();
-        }
-      }
-    }
-
-    //
-    //StdinHeadFileで処理する段階で標準入力から追加読み込みをしたか？
-    //D2V作成前にStdinから追加の読込みをした。
-    //データの連続性が維持できないので、プロセスを強制終了。
-    //StdinHeadFile_Size_CmdLineを増やして対応する。
-    //
+    //HeadFileで処理する段階で標準入力から追加読み込みをしたか？
     if (D2V_Flag == false && GetExtraData_fromStdin)
     {
-      _close(fdStdinHeadFile);
-      remove(StdinHeadFile_Path);
+      _close(fdHeadFile);
+      remove(HeadFilePath.c_str());
+      _fcloseall();
       exit(1);
     }
 
-    //一時ファイル削除、２回目のThreadKill(int)で削除
+    //ファイル終端が確定したので書き換え
     if (D2V_Flag && Mode_PipeInput)
     {
-      _close(fdStdinHeadFile);
-      remove(StdinHeadFile_Path);
+      //HeadFile削除
+      _close(fdHeadFile);
+      remove(HeadFilePath.c_str());
+
+
+      //d2v全行読み込み
+      //　\r\nは\nとして取得される。
+      std::vector<std::string> text;
+      char buff[256];
+      _fseeki64(D2VFile, 0, SEEK_SET);
+      while (fgets(buff, 256, D2VFile) != NULL)
+      {
+        std::string line = std::string(buff);
+        if (line.find("Location=0,0,0,0") == 0)
+        {
+          //rightlba更新
+          __int64 rightlba = (int)(fpos_tracker / SECTOR_SIZE);
+          sprintf(buff, "Location=0,0,0,%I64x\n", rightlba);
+          line = std::string(buff);
+        }
+        text.emplace_back(line);
+      }
+
+      //ファイルリセット、再書込
+      //　\nは\r\nで書き込まれる。
+      fclose(D2VFile);
+      D2VFile = _fsopen(D2VFilePath, "w+", _SH_DENYWR);
+      if (D2VFile)
+        for (auto line : text)
+          fprintf(D2VFile, "%s", line.c_str());
     }
+    //==========================================================================
+
+
+
+
+
+
+
+
 
 
     _fcloseall();
@@ -4582,13 +4557,23 @@ void UpdateWindowText(int mode)
     float percent;
     timing.ed = timeGetTime();
     elapsed = (timing.ed - timing.op) / 1000;
-    percent = (float)(100.0*(process.run - process.start + _telli64(Infile[CurrentFile])) / (process.end - process.start));
+    ////percent = (float)(100.0*(process.run - process.start + _telli64(Infile[CurrentFile])) / (process.end - process.start));
+    if (Mode_PipeInput)
+    {
+      percent = (float)(100.0*(process.run - process.start + fpos_tracker) / (process.end - process.start));
+    }
+    else
+    {
+      percent = (float)(100.0*(process.run - process.start + _telli64(Infile[CurrentFile])) / (process.end - process.start));
+    }
+
     remain = (int)((timing.ed - timing.op)*(100.0 - percent) / percent) / 1000;
 
     sprintf(szBuffer, "%d:%02d:%02d", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60);
     SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
 
-    if (Mode_PipeInput) remain = 0;
+    if (Mode_PipeInput)
+      remain = 0;
     sprintf(szBuffer, "%d:%02d:%02d", remain / 3600, (remain % 3600) / 60, remain % 60);
     SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
 
