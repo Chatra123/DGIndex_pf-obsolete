@@ -185,10 +185,26 @@ int Get_Hdr(int mode)
       else
       {
         //                  dprintf("DGIndex: Index sequence header at %d\n", Rdptr - 8 + (32 - BitsLeft)/8);
-        d2v_current.position = _telli64(Infile[CurrentFile])
-          - (BUFFER_SIZE - (Rdptr - Rdbfr))
-          - 8
-          + (32 - BitsLeft) / 8;
+        ////d2v_current.position = _telli64(Infile[CurrentFile])
+        ////  - (BUFFER_SIZE - (Rdptr - Rdbfr))
+        ////  - 8
+        ////  + (32 - BitsLeft) / 8;
+
+        if (Mode_PipeInput)
+        {
+          d2v_current.position = fpos_tracker
+            - (BUFFER_SIZE - (Rdptr - Rdbfr))
+            - 8
+            + (32 - BitsLeft) / 8;
+        }
+        else
+        {
+          d2v_current.position = _telli64(Infile[CurrentFile])
+            - (BUFFER_SIZE - (Rdptr - Rdbfr))
+            - 8
+            + (32 - BitsLeft) / 8;
+        }
+
       }
       Get_Bits(32);
       sequence_header();
@@ -212,10 +228,33 @@ int Get_Hdr(int mode)
       if (SystemStream_Flag != ELEMENTARY_STREAM)
         position = CurrentPackHeaderPosition;
       else
-        position = _telli64(Infile[CurrentFile])
-        - (BUFFER_SIZE - (Rdptr - Rdbfr))
-        - 8
-        + (32 - BitsLeft) / 8;
+      {
+        ////position = _telli64(Infile[CurrentFile])
+        ////  - (BUFFER_SIZE - (Rdptr - Rdbfr))
+        ////  - 8
+        ////  + (32 - BitsLeft) / 8;
+        if (Mode_PipeInput)
+        {
+          position = fpos_tracker
+            - (BUFFER_SIZE - (Rdptr - Rdbfr))
+            - 8
+            + (32 - BitsLeft) / 8;
+        }
+        else
+        {
+          position = _telli64(Infile[CurrentFile])
+            - (BUFFER_SIZE - (Rdptr - Rdbfr))
+            - 8
+            + (32 - BitsLeft) / 8;
+
+        }
+      }
+
+
+
+
+
+
       Get_Bits(32);
       picture_header(position, HadSequenceHeader, HadGopHeader);
       return 0;
@@ -430,7 +469,12 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
   if (d2v_current.type == I_TYPE)
   {
     d2v_current.file = process.startfile = CurrentFile;
-    process.startloc = _telli64(Infile[CurrentFile]);
+    //process.startloc = _telli64(Infile[CurrentFile]);
+    if (Mode_PipeInput)
+      process.startloc = fpos_tracker;
+    else
+      process.startloc = _telli64(Infile[CurrentFile]);
+
     d2v_current.lba = process.startloc / SECTOR_SIZE - 1;
     if (d2v_current.lba < 0)
     {
