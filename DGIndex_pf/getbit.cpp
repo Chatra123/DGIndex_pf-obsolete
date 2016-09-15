@@ -26,77 +26,56 @@
 #include "getbit.h"
 #include "AC3Dec\ac3.h"
 
-#include <math.h>
-#include <thread>
-#include <chrono>
-using namespace std::chrono;
-
 unsigned int start;
-
 
 int _donread(int fd, void *buffer, unsigned int count)
 {
-  unsigned int bytes = 0;
-
-  //標準入力
+  unsigned int read = 0;
+  //stdin
   if (Mode_PipeInput)
   {
-    //StdinHeadFile
+    //from HeadFile
     if (!_eof(fd))
-    {
-
-      bytes = _read(fd, buffer, count);
-      if (bytes != count)
-      {
-        //残りを標準入力
-        int append = read_stdin((char*)buffer + bytes, count - bytes);
-        bytes += append;
-      }
-    }
-    else
-      //標準入力
-      bytes = read_stdin((char*)buffer, count);
+      read = _read(fd, buffer, count);
+    //from stdin
+    if (read != count)
+      read += read_stdin((char*)buffer + read, count - read);
   }
   else
   {
-    //ファイル
-    bytes = _read(fd, buffer, count);
-    Limit_ReadSpeed(bytes);
+    //file
+    read = _read(fd, buffer, count);
+    ReadSpeedLimit(read);
   }
 
-  fpos_tracker += bytes; //fpos_trackerを元にフレーム位置を計算する
-  return bytes;
+  fpos_tracker += read; //fpos_trackerを元にフレーム位置を計算する
+  return read;
 }
 
 
 //
 //標準入力からデータ取得
 //
-int read_stdin(void *buffer, const int demandSize)
+int read_stdin(void *buffer, const int req_size)
 {
   int read_sum = 0;
-
-  while (read_sum < demandSize)
+  while (read_sum < req_size)
   {
-    char tmpbuff[BUFFER_SIZE];
-    int tickReadSize = demandSize - read_sum;
-
-    int readsize = _read(fdStdin, tmpbuff, tickReadSize);
-    if (readsize == -1 )
+    int tick_request = req_size - read_sum;
+    int read = _read(fdStdin, (char*)buffer + read_sum, tick_request);
+    if (read == -1)
     {
-      // If fd is invalid
+      // If fd is invalid.
       // If execution is allowed to continue, the function returns -1 and sets errno to EBADF.
       IsClosed_stdin = true;
       return 0; //エラー終了
     }
-    else if (readsize == 0)
+    else if (read == 0)
     {
       IsClosed_stdin = true;
       break; //パイプ終端、正常終了
     }
-
-    memcpy((char*)buffer + read_sum, tmpbuff, readsize);
-    read_sum += readsize;
+    read_sum += read;
   }
 
   GetExtraData_fromStdin = true;
@@ -107,37 +86,26 @@ int read_stdin(void *buffer, const int demandSize)
 //
 //ファイル読込速度制限
 //
-void Limit_ReadSpeed(unsigned int readsize)
+void ReadSpeedLimit(unsigned int read)
 {
   if (0 < SpeedLimit)
   {
-    tickReadSize_speedlimit += readsize;                                 //単位時間の読込み量500ms単位
-    auto tickDuration = system_clock::now() - tickBeginTime_speedlimit;  //計測時間
-    auto duration_ms = duration_cast<milliseconds>(tickDuration).count();
+    tickReadSize_speedlimit += read;  //500ms間の読込み
+    auto tickElapse = system_clock::now() - tickBeginTime_speedlimit;
+    auto elapse_ms = duration_cast<milliseconds>(tickElapse).count();
 
-    if (500 < duration_ms)
+    //500msごとにカウンタリセット
+    if (500 < elapse_ms)
     {
-      //単位時間ごとにカウンタリセット500ms単位
       tickBeginTime_speedlimit = system_clock::now();
       tickReadSize_speedlimit = 0;
     }
 
     //制限をこえたらsleep_for
     if (SpeedLimit * (500.0 / 1000.0) < tickReadSize_speedlimit)
-      std::this_thread::sleep_for(milliseconds(500 - duration_ms));
+      std::this_thread::sleep_for(milliseconds(500 - elapse_ms));
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -240,20 +208,20 @@ FILE *OpenAudio(char *path, char *mode, unsigned int id)
 }
 
 #define LOCATE \
-    while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
-      { \
+      while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
+            { \
 Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE); \
 if (Read < BUFFER_SIZE) Next_File();\
 Rdptr -= BUFFER_SIZE; \
-      }
+            }
 
 #define DECODE_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
 size = 0; \
-    while (Packet_Length > 0) \
-      { \
+      while (Packet_Length > 0) \
+            { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size); \
@@ -268,15 +236,15 @@ size = ac3_decode_data(Rdptr, Packet_Length, size); \
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-      } \
+            } \
 }
 
 #define DEMUX_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-    while (Packet_Length > 0) \
-      { \
+      while (Packet_Length > 0) \
+            { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -291,7 +259,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-      } \
+            } \
 }
 
 void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsigned char format)
@@ -374,8 +342,8 @@ void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsign
 do {\
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-    while (Packet_Length > 0) \
-      { \
+      while (Packet_Length > 0) \
+            { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));\
@@ -390,15 +358,15 @@ fwrite(Rdptr, Packet_Length, 1, (fp));\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-      } \
+            } \
 } while( 0 )
 
 #define DEMUX_DTS \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-    while (Packet_Length > 0) \
-      { \
+      while (Packet_Length > 0) \
+            { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -413,7 +381,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-      } \
+            } \
 }
 
 static char *FTType[5] = {
@@ -511,8 +479,8 @@ void Initialize_Buffer()
 #define SKIP_TRANSPORT_PACKET_BYTES(bytes_to_skip)\
 do {\
 int temp = (bytes_to_skip); \
-    while (temp> 0)\
-      { \
+      while (temp> 0)\
+            { \
 if (temp + Rdptr > BUFFER_SIZE + Rdbfr) \
 { \
 temp-= BUFFER_SIZE + Rdbfr - Rdptr; \
@@ -525,7 +493,7 @@ else\
 Rdptr += temp;\
 temp = 0; \
 } \
-      } \
+            } \
 Packet_Length -= (bytes_to_skip); \
 } while (0)
 
@@ -594,7 +562,7 @@ void Next_Transport_Packet()
   static unsigned int prev_code;
   bool pmt_check = false;
   unsigned int check_num_pmt = 0;
-  unsigned int time_limit = 60 * 1000;
+  unsigned int time_limit = 30 * 1000;
 
   int counter = 0;
   start = timeGetTime();
@@ -622,7 +590,7 @@ void Next_Transport_Packet()
     }
   retry_sync:
 
-    const unsigned int pmtcheck_interval = (Mode_PipeInput) ? 3000 : 500;
+    const unsigned int check_interval = Mode_PipeInput ? 5000 : 500;
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
     time = timeGetTime();
@@ -633,7 +601,7 @@ void Next_Transport_Packet()
         NULL, MB_OK | MB_ICONERROR);
       ThreadKill(MISC_KILL);
     }
-    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > pmtcheck_interval)
+    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > check_interval)
     {
       pat_parser.InitializePMTCheckItems();
       pmt_check = true;
@@ -641,7 +609,7 @@ void Next_Transport_Packet()
 
     // Search for a sync byte. Gives some protection against emulation.
     if (Stop_Flag)
-    ThreadKill(MISC_KILL);
+      ThreadKill(MISC_KILL);
 
     if (Get_Byte() != 0x47)
       goto retry_sync;
@@ -666,7 +634,6 @@ void Next_Transport_Packet()
     {
       if (Mode_PipeInput)
       {
-        //D2Vファイル内のバイト位置はPackHeaderPositionを元に計算する
         PackHeaderPosition = fpos_tracker
           - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 1;
       }
@@ -1601,8 +1568,9 @@ void Next_PVA_Packet()
   start = timeGetTime();
   for (;;)
   {
+    unsigned int timeout = Mode_PipeInput ? 6000 : 2000;
     time = timeGetTime();
-    if (time - start > 2000)
+    if (time - start > timeout)
     {
       if (Mode_NoDialog == false)
         MessageBox(hWnd, "Cannot find video data.", NULL, MB_OK | MB_ICONERROR);
@@ -1637,11 +1605,23 @@ void Next_PVA_Packet()
 
     // Record the location of the start of the packet. This will be used
     // for indexing when an I frame is detected.
-    if (D2V_Flag)
+    ////if (D2V_Flag)
+    ////{
+    ////  PackHeaderPosition = _telli64(Infile[CurrentFile])
+    ////    - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+    ////}
+    if (Mode_PipeInput)
+    {
+      PackHeaderPosition = fpos_tracker
+        - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+    }
+    else
     {
       PackHeaderPosition = _telli64(Infile[CurrentFile])
         - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
     }
+
+
 
     // Pick up the remaining packet header fields.
     pva.counter = Get_Byte();
@@ -3073,8 +3053,16 @@ void UpdateInfo()
     {
       processed += Infilelength[i];
     }
-    processed += _telli64(Infile[CurrentFile]);
-    processed *= TRACK_PITCH;
+    if (Mode_PipeInput)
+    {
+      processed += fpos_tracker;
+      processed *= TRACK_PITCH;
+    }
+    else
+    {
+      processed += _telli64(Infile[CurrentFile]);
+      processed *= TRACK_PITCH;
+    }
 
     if (Mode_PipeInput) processed = -1;
     else processed /= Infiletotal;
