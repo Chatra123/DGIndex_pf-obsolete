@@ -560,16 +560,14 @@ void Next_Transport_Packet()
   static unsigned int prev_code;
   bool pmt_check = false;
   unsigned int check_num_pmt = 0;
-  unsigned int time_limit = 30 * 1000;
+  unsigned int time_limit = 20 * 1000;
+#ifdef _DEBUG
+  time_limit = 300000;    /* Change 5 minutes. */
+#endif
 
-  int counter = 0;
   start = timeGetTime();
   for (;;)
   {
-    counter++;
-    if (counter == 30)
-      counter = 30;
-
     PES_PTS = 0;
     bytes_left = 0;
     Packet_Length = TransportPacketSize; // total length of an MPEG-2 transport packet
@@ -587,8 +585,7 @@ void Next_Transport_Packet()
       Packet_Length -= 4;
     }
   retry_sync:
-
-    const unsigned int check_interval = Mode_PipeInput ? 5000 : 500;
+    const unsigned int check_time = Mode_PipeInput ? 500 * 5 : 500;
     // Don't loop forever. If we don't get data
     // in a reasonable time (5 secs) we exit.
     time = timeGetTime();
@@ -599,7 +596,7 @@ void Next_Transport_Packet()
         NULL, MB_OK | MB_ICONERROR);
       ThreadKill(MISC_KILL);
     }
-    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > check_interval)
+    else if ((Start_Flag || process.locate == LOCATE_SCROLL) && !pmt_check && time - start > check_time)
     {
       pat_parser.InitializePMTCheckItems();
       pmt_check = true;
@@ -1566,7 +1563,7 @@ void Next_PVA_Packet()
   start = timeGetTime();
   for (;;)
   {
-    unsigned int timeout = Mode_PipeInput ? 6000 : 2000;
+    unsigned int timeout = Mode_PipeInput ? 2000 * 5 : 2000;
     time = timeGetTime();
     if (time - start > timeout)
     {

@@ -1134,7 +1134,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
               MB_YESNO | MB_ICONWARNING) != IDYES)
               break;
           }
-
           D2VFile = _fsopen(szBuffer, "w+", _SH_DENYWR);
           strcpy(D2VFilePath, szBuffer);
         }
@@ -2945,11 +2944,6 @@ void ThreadKill(int mode)
 
 
 
-
-
-
-
-
     //==========================================================================
     //HeadFileÇ≈èàóùÇ∑ÇÈíiäKÇ≈ïWèÄì¸óÕÇ©ÇÁí«â¡ì«Ç›çûÇ›ÇÇµÇΩÇ©ÅH
     if (D2V_Flag == false && GetExtraData_fromStdin)
@@ -2995,13 +2989,6 @@ void ThreadKill(int mode)
           fprintf(D2VFile, "%s", line.c_str());
     }
     //==========================================================================
-
-
-
-
-
-
-
 
 
 
@@ -4557,23 +4544,21 @@ void UpdateWindowText(int mode)
     float percent;
     timing.ed = timeGetTime();
     elapsed = (timing.ed - timing.op) / 1000;
-    ////percent = (float)(100.0*(process.run - process.start + _telli64(Infile[CurrentFile])) / (process.end - process.start));
     if (Mode_PipeInput)
     {
       percent = (float)(100.0*(process.run - process.start + fpos_tracker) / (process.end - process.start));
+      remain = 0;
     }
     else
     {
       percent = (float)(100.0*(process.run - process.start + _telli64(Infile[CurrentFile])) / (process.end - process.start));
+      remain = (int)((timing.ed - timing.op)*(100.0 - percent) / percent) / 1000;
     }
-
-    remain = (int)((timing.ed - timing.op)*(100.0 - percent) / percent) / 1000;
 
     sprintf(szBuffer, "%d:%02d:%02d", elapsed / 3600, (elapsed % 3600) / 60, elapsed % 60);
     SetDlgItemText(hDlg, IDC_ELAPSED, szBuffer);
 
-    if (Mode_PipeInput)
-      remain = 0;
+
     sprintf(szBuffer, "%d:%02d:%02d", remain / 3600, (remain % 3600) / 60, remain % 60);
     SetDlgItemText(hDlg, IDC_REMAIN, szBuffer);
 
