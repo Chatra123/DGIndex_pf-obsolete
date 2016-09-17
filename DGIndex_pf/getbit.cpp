@@ -109,8 +109,6 @@ void ReadSpeedLimit(unsigned int read)
 
 
 
-
-
 #define MONO 3
 #define STEREO 0
 #define LAYER1 3
@@ -208,20 +206,20 @@ FILE *OpenAudio(char *path, char *mode, unsigned int id)
 }
 
 #define LOCATE \
-      while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
-            { \
+            while (Rdptr >= (Rdbfr + BUFFER_SIZE))\
+                                          { \
 Read = _donread(Infile[CurrentFile], Rdbfr, BUFFER_SIZE); \
 if (Read < BUFFER_SIZE) Next_File();\
 Rdptr -= BUFFER_SIZE; \
-            }
+                                          }
 
 #define DECODE_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
 size = 0; \
-      while (Packet_Length > 0) \
-            { \
+            while (Packet_Length > 0) \
+                                          { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 size = ac3_decode_data(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, size); \
@@ -236,15 +234,15 @@ size = ac3_decode_data(Rdptr, Packet_Length, size); \
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-            } \
+                                          } \
 }
 
 #define DEMUX_AC3 \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-      while (Packet_Length > 0) \
-            { \
+            while (Packet_Length > 0) \
+                                          { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -259,7 +257,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-            } \
+                                          } \
 }
 
 void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsigned char format)
@@ -342,8 +340,8 @@ void DemuxLPCM(int *size, int *Packet_Length, unsigned char PCM_Buffer[], unsign
 do {\
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-      while (Packet_Length > 0) \
-            { \
+            while (Packet_Length > 0) \
+                                          { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, (fp));\
@@ -358,15 +356,15 @@ fwrite(Rdptr, Packet_Length, 1, (fp));\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-            } \
+                                          } \
 } while( 0 )
 
 #define DEMUX_DTS \
 { \
 if (SystemStream_Flag == TRANSPORT_STREAM && TransportPacketSize == 204)\
 Packet_Length -= 16;\
-      while (Packet_Length > 0) \
-            { \
+            while (Packet_Length > 0) \
+                                          { \
 if (Packet_Length+Rdptr > BUFFER_SIZE+Rdbfr)\
 { \
 fwrite(Rdptr, BUFFER_SIZE+Rdbfr-Rdptr, 1, audio[AUDIO_ID].file);\
@@ -381,7 +379,7 @@ fwrite(Rdptr, Packet_Length, 1, audio[AUDIO_ID].file);\
 Rdptr += Packet_Length; \
 Packet_Length = 0;\
 } \
-            } \
+                                          } \
 }
 
 static char *FTType[5] = {
@@ -479,8 +477,8 @@ void Initialize_Buffer()
 #define SKIP_TRANSPORT_PACKET_BYTES(bytes_to_skip)\
 do {\
 int temp = (bytes_to_skip); \
-      while (temp> 0)\
-            { \
+            while (temp> 0)\
+                                          { \
 if (temp + Rdptr > BUFFER_SIZE + Rdbfr) \
 { \
 temp-= BUFFER_SIZE + Rdbfr - Rdptr; \
@@ -493,7 +491,7 @@ else\
 Rdptr += temp;\
 temp = 0; \
 } \
-            } \
+                                          } \
 Packet_Length -= (bytes_to_skip); \
 } while (0)
 
@@ -1605,23 +1603,19 @@ void Next_PVA_Packet()
 
     // Record the location of the start of the packet. This will be used
     // for indexing when an I frame is detected.
-    ////if (D2V_Flag)
-    ////{
-    ////  PackHeaderPosition = _telli64(Infile[CurrentFile])
-    ////    - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
-    ////}
-    if (Mode_PipeInput)
+    if (D2V_Flag)
     {
-      PackHeaderPosition = fpos_tracker
-        - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+      if (Mode_PipeInput)
+      {
+        PackHeaderPosition = fpos_tracker
+          - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+      }
+      else
+      {
+        PackHeaderPosition = _telli64(Infile[CurrentFile])
+          - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
+      }
     }
-    else
-    {
-      PackHeaderPosition = _telli64(Infile[CurrentFile])
-        - (__int64)BUFFER_SIZE + (__int64)Rdptr - (__int64)Rdbfr - 3;
-    }
-
-
 
     // Pick up the remaining packet header fields.
     pva.counter = Get_Byte();
@@ -1868,15 +1862,10 @@ void Next_Packet()
       if (D2V_Flag)
       {
         if (Mode_PipeInput)
-        {
           PackHeaderPosition = fpos_tracker;
-          PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
-        }
         else
-        {
           PackHeaderPosition = _telli64(Infile[CurrentFile]);
-          PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
-        }
+        PackHeaderPosition = PackHeaderPosition - (__int64)BUFFER_SIZE + (__int64)Rdptr - 4 - (__int64)Rdbfr;
       }
       if (((tmp = Get_Byte()) & 0xf0) == 0x20)
       {
@@ -3054,19 +3043,12 @@ void UpdateInfo()
       processed += Infilelength[i];
     }
     if (Mode_PipeInput)
-    {
       processed += fpos_tracker;
-      processed *= TRACK_PITCH;
-    }
     else
-    {
       processed += _telli64(Infile[CurrentFile]);
-      processed *= TRACK_PITCH;
-    }
-
+    processed *= TRACK_PITCH;
     if (Mode_PipeInput) processed = -1;
     else processed /= Infiletotal;
-
     trackpos = (int)processed;
     SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, trackpos);
     InvalidateRect(hwndSelect, NULL, TRUE);

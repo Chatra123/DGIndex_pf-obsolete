@@ -127,7 +127,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
 
   case LOCATE_SCROLL:
     CurrentFile = process.startfile;
-
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
     fpos_tracker = _telli64(Infile[process.startfile]);
 
@@ -169,7 +168,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
     fpos_tracker = _telli64(Infile[0]);
-
     Initialize_Buffer();
     while (1)
     {
@@ -193,9 +191,9 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     // Skip any leading null characters, because some
     // captured transport files were seen to start with a large
     // number of nulls.
+
     _lseeki64(Infile[0], 0, SEEK_SET);
     fpos_tracker = _telli64(Infile[0]);
-
     for (;;)
     {
       if (_read(Infile[0], buf, 1) == 0)
@@ -217,7 +215,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     }
 
     Read = _read(Infile[0], buf, 2048);
-
     TransportPacketSize = 188;
   try_again:
     b = buf;
@@ -262,7 +259,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
       CurrentFile = 0;
       _lseeki64(Infile[0], 0, SEEK_SET);
       fpos_tracker = _telli64(Infile[0]);
-
       Initialize_Buffer();
 
       for (i = 0; i < 1024; i++)
@@ -283,7 +279,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
     fpos_tracker = _telli64(Infile[0]);
-
     Initialize_Buffer();
     count = 0;
     while ((show = Show_Bits(32)) != 0x1b3)
@@ -323,7 +318,6 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     CurrentFile = 0;
     _lseeki64(Infile[0], 0, SEEK_SET);
     fpos_tracker = _telli64(Infile[0]);
-
     Initialize_Buffer();
 
     // We know the stream type now, so our parsing is immune to
@@ -438,10 +432,8 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     savefile = process.startfile;
     saveloc = process.startloc;
     CurrentFile = process.startfile;
-
     _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
     fpos_tracker = _telli64(Infile[process.startfile]);
-
     // We initialize the following variables to the current start position, because if the user
     // has set a range, and the packs are large such that we won't hit a pack/packet start
     // before we hit an I frame, we don't want the pack/packet position to remain at 0.
@@ -483,11 +475,8 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
   }
   PTSAdjustDone = 0;
   CurrentFile = process.startfile;
-
-
   _lseeki64(Infile[process.startfile], (process.startloc / SECTOR_SIZE)*SECTOR_SIZE, SEEK_SET);
   fpos_tracker = _telli64(Infile[process.startfile]);
-
   // We initialize the following variables to the current start position, because if the user
   // has set a range, and the packs are large such that we won't hit a pack/packet start
   // before we hit an I frame, we don't want the pack/packet position to remain at 0.
@@ -564,7 +553,6 @@ static BOOL GOPBack()
 
     _lseeki64(Infile[process.startfile], process.startloc, SEEK_SET);
     fpos_tracker = _telli64(Infile[process.startfile]);
-
     Initialize_Buffer();
 
     for (;;)

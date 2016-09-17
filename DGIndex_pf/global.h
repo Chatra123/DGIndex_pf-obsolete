@@ -293,16 +293,6 @@ typedef struct{
 } Cpu;
 XTN Cpu cpu;
 
-/* decoder operation control flags */
-XTN bool Check_Flag;
-XTN bool D2V_Flag;
-XTN bool AudioOnly_Flag;
-XTN unsigned int AudioPktCount;
-XTN bool Display_Flag;
-XTN int Fault_Flag;
-XTN int CurrentFile;
-XTN int NumLoadedFiles;
-
 
 
 
@@ -354,7 +344,15 @@ XTN void ReadSpeedLimit(unsigned int read_size);
 
 
 
-
+/* decoder operation control flags */
+XTN bool Check_Flag;
+XTN bool D2V_Flag;
+XTN bool AudioOnly_Flag;
+XTN unsigned int AudioPktCount;
+XTN bool Display_Flag;
+XTN int Fault_Flag;
+XTN int CurrentFile;
+XTN int NumLoadedFiles;
 
 
 

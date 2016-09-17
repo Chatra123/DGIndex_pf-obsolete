@@ -143,14 +143,9 @@ int Get_Hdr(int mode)
   boolean HadSequenceHeader = false;
   boolean HadGopHeader = false;
 
-  //ドロップの多いファイルで無限ループになった。
-  // case 0x1be: でループしつづけないようにチェック。
-  int loop_counter = 0;
-
   for (;;)
   {
     // Look for next_start_code.
-
     if (Stop_Flag == true)
       return 1;
     next_start_code();
@@ -159,37 +154,17 @@ int Get_Hdr(int mode)
     switch (code)
     {
     case 0x1be:
-      loop_counter++;
-      if (loop_counter <= 40)
-      {
-        break;
-      }
-      else
-      {
-        Get_Bits(32);
-        break;
-      }
       break;
-
 
     case SEQUENCE_HEADER_CODE:
       // Index the location of the sequence header for the D2V file.
       // We prefer to index the sequence header corresponding to this
       // GOP, but if one doesn't exist, we index the picture header of the I frame.
       if (SystemStream_Flag != ELEMENTARY_STREAM)
-      {
-
         d2v_current.position = CurrentPackHeaderPosition;
-
-      }
       else
       {
         //                  dprintf("DGIndex: Index sequence header at %d\n", Rdptr - 8 + (32 - BitsLeft)/8);
-        ////d2v_current.position = _telli64(Infile[CurrentFile])
-        ////  - (BUFFER_SIZE - (Rdptr - Rdbfr))
-        ////  - 8
-        ////  + (32 - BitsLeft) / 8;
-
         if (Mode_PipeInput)
         {
           d2v_current.position = fpos_tracker
@@ -204,7 +179,6 @@ int Get_Hdr(int mode)
             - 8
             + (32 - BitsLeft) / 8;
         }
-
       }
       Get_Bits(32);
       sequence_header();
@@ -229,10 +203,6 @@ int Get_Hdr(int mode)
         position = CurrentPackHeaderPosition;
       else
       {
-        ////position = _telli64(Infile[CurrentFile])
-        ////  - (BUFFER_SIZE - (Rdptr - Rdbfr))
-        ////  - 8
-        ////  + (32 - BitsLeft) / 8;
         if (Mode_PipeInput)
         {
           position = fpos_tracker
@@ -246,14 +216,8 @@ int Get_Hdr(int mode)
             - (BUFFER_SIZE - (Rdptr - Rdbfr))
             - 8
             + (32 - BitsLeft) / 8;
-
         }
       }
-
-
-
-
-
 
       Get_Bits(32);
       picture_header(position, HadSequenceHeader, HadGopHeader);
@@ -469,12 +433,10 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
   if (d2v_current.type == I_TYPE)
   {
     d2v_current.file = process.startfile = CurrentFile;
-    //process.startloc = _telli64(Infile[CurrentFile]);
     if (Mode_PipeInput)
       process.startloc = fpos_tracker;
     else
       process.startloc = _telli64(Infile[CurrentFile]);
-
     d2v_current.lba = process.startloc / SECTOR_SIZE - 1;
     if (d2v_current.lba < 0)
     {
