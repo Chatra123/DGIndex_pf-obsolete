@@ -285,12 +285,10 @@ DWORD WINAPI MPEG2Dec(LPVOID n)
     {
       if (Stop_Flag || count > 10000000)
       {
-        //ƒXƒNƒ‰ƒ“ƒuƒ‹‚ª‰ğœ‚Å‚«‚Ä‚¢‚È‚¢“™
         // We didn't find a sequence header.
         if (Mode_NoDialog == false)
           MessageBox(hWnd, "No video sequence header found!", NULL, MB_OK | MB_ICONERROR);
-        if (Mode_Hide)
-          ThreadKill(MISC_KILL);
+        ThreadKill(MISC_KILL);
       }
       Flush_Buffer(8);
       count++;
