@@ -1124,7 +1124,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR))
+          if (D2VFile = _fsopen(szBuffer, "r", _SH_DENYNO))
           {
             fclose(D2VFile);
 
@@ -1206,7 +1206,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         char line[2048];
         int D2Vformat;
 
-        D2VFile = _fsopen(szBuffer, "r", _SH_DENYWR);
+        D2VFile = _fsopen(szBuffer, "r", _SH_DENYNO);
 
         // Validate the D2V file.
         fgets(line, 2048, D2VFile);
