@@ -555,8 +555,10 @@ static BOOL GOPBack()
 
     for (;;)
     {
-      curloc = _telli64(Infile[process.startfile]);
-
+      if (Mode_PipeInput)
+        curloc = fpos_tracker;
+      else
+        curloc = _telli64(Infile[process.startfile]);
       if (curloc >= endloc) break;
       Get_Hdr(0);
       if (Stop_Flag == true)

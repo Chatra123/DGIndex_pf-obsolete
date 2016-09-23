@@ -473,8 +473,6 @@ static void picture_header(__int64 start, boolean HadSequenceHeader, boolean Had
       process.lba = d2v_current.lba;
     }
 
-
-
     if (Mode_PipeInput)
     {
       if (IsClosed_stdin)
