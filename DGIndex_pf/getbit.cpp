@@ -3044,8 +3044,7 @@ void UpdateInfo()
     else
       processed += _telli64(Infile[CurrentFile]);
     processed *= TRACK_PITCH;
-    if (Mode_PipeInput) processed = -1;
-    else processed /= Infiletotal;
+    processed /= Infiletotal;
     trackpos = (int)processed;
     SendMessage(hTrack, TBM_SETPOS, (WPARAM)true, trackpos);
     InvalidateRect(hwndSelect, NULL, TRUE);

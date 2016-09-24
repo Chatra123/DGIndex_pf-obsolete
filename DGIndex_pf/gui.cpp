@@ -2960,7 +2960,8 @@ void ThreadKill(int mode)
       //HeadFile削除
       _close(fdHeadFile);
       remove(HeadFilePath.c_str());
-
+      Infile[0] = NULL;
+      NumLoadedFiles = 0;
 
       //d2v全行読み込み
       //　\r\nは\nとして取得される。
@@ -4208,6 +4209,8 @@ void Recovery()
       Infiletotal += Infilelength[i];
     }
   }
+  if (Mode_PipeInput)
+    Infiletotal = INT64_MAX;
 
   InvalidateRect(hwndSelect, NULL, TRUE);
   ResizeWindow(INIT_WIDTH, INIT_HEIGHT);
