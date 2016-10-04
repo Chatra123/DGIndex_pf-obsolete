@@ -76,7 +76,7 @@ DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
 
 ------------------------------------------------------------------
 ### 謝辞
-maki/maki_rxrzさん公開のdgindex158src_fix_mod_20141110を元に作成しました。  
-DGMPGDecのオリジナル及びその改良版の開発に関わった方々にお礼申し上げます。
+maki/maki_rxrz版のDGMPGDecを元に作成しました。  
+DGMPGDecのオリジナル及びその改良版の開発に関わった方々にお礼申し上げます。  
 
 
