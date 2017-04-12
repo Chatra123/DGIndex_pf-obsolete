@@ -1,36 +1,30 @@
 ﻿
-## DGIndex_pf
+## DGIndex
 
 tsからd2v、音声ファイルを作成します。
 
 
 ------------------------------------------------------------------
-### 使い方
-
-Run_DGIndex_pf.batのショートカットを作成し、TSファイルをドロップ
-
-
 ### 使い方　　コマンドライン
 
-ファイル  音声あり  
-DGIndex_pf.exe  -i "C:\video.ts" -o "C:\video.ts"     -ia 4 -fo 0 -yr 2 -om 2
+ファイル  
+DGIndex.exe  -i "C:\video.ts" -o "C:\video.ts"  
 
-パイプ  　音声なし  
-DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 0
+パイプ  
+DGIndex.exe  -pipe "C:\video.ts" -o "C:\video.ts"  
 
-パイプ　  音声あり  
-DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
-
+パイプ　音声なし  
+DGIndex.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -om 0  
 
 
 ------------------------------------------------------------------
 ### 追加引数
 引数は全て半角小文字、半角スペースにする。半角大文字、全角スペースは使用できません。
 
-    -pipe  "C:\video.ts"
-パイプからデータを受けとる  
+    -pipe  "C:\Video.ts"
+標準入力からデータを受けとる  
 .d2vファイル内に参照元のファイルパスとして C:\video.ts を書き込みます。  
-文字コード　shift-jis
+
 
     -limit 10.0
 ファイル読込み速度を 10.0MiB/secに制限
@@ -77,6 +71,6 @@ DGIndex_pf.exe  -pipe "C:\video.ts" -o "C:\video.ts"  -ia 4 -fo 0 -yr 2 -om 2
 ------------------------------------------------------------------
 ### 謝辞
 maki/maki_rxrz版のDGMPGDecを元に作成しました。  
-DGMPGDecのオリジナル及びその改良版の開発に関わった方々にお礼申し上げます。  
+オリジナル及びその改良版の開発に関わった方々にお礼申し上げます。  
 
 
